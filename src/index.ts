@@ -1,10 +1,13 @@
 import express from "express";
 import connectDB from "./config/db";
 import "./config/env";
+import auctionRoutes from "./api/routes/auction.routes";
 
 const app = express();
 
 app.use(express.json());
+
+app.use("/auctions", auctionRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
