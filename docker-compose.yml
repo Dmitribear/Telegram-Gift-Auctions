@@ -1,0 +1,25 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: auction_mongo
+    ports:
+      - "27017:27017"
+    # Запускаем с настройкой реплика-сета
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo "try { rs.initiate() } catch (e) { rs.status() }" | mongosh --port 27017 --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Redis тоже нужен по заданию, добавим сразу
+  redis:
+    image: redis:alpine
+    container_name: auction_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:
