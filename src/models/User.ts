@@ -1,16 +1,20 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
-// 1. Создаем интерфейс (для TypeScript) - аналог dataclass/pydantic
-interface IUser {
+export interface IUser extends Document {
   username: string;
   balance: number;
+  lockedBalance: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// 2. Создаем Схему (для MongoDB) - аналог SQLAlchemy Model
-const UserSchema = new mongoose.Schema<IUser>({
-  username: { type: String, required: true, unique: true },
-  balance: { type: Number, default: 0 } // Mongoose не даст записать сюда текст
-});
+const UserSchema = new Schema<IUser>(
+  {
+    username: { type: String, required: true, unique: true, trim: true },
+    balance: { type: Number, default: 0, min: 0 },
+    lockedBalance: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true }
+);
 
-// 3. Экспортируем модель
-export const User = mongoose.model<IUser>('User', UserSchema);
+export const User = mongoose.model<IUser>("User", UserSchema);
