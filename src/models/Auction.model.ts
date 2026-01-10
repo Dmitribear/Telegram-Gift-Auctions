@@ -47,6 +47,13 @@ const AuctionSchema = new Schema(
       min: [1, "maxParticipantsPerRound must be > 0"],
     },
     currentRound: { type: Number, default: 0, min: 0 },
+    endsAt: { type: Date, required: false },
+    antiSnipeWindowSeconds: { type: Number, default: 10, min: 0 },
+    antiSnipeExtendSeconds: { type: Number, default: 10, min: 0 },
+    winnerUser: { type: String, required: false },
+    winningBid: { type: Number, required: false, min: 0 },
+    finishedAt: { type: Date, required: false },
+    botMaxBidAmount: { type: Number, required: false, min: 0 },
   },
   {
     timestamps: true,

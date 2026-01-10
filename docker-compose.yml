@@ -3,7 +3,7 @@ services:
     image: mongo:6.0
     container_name: auction_mongo
     ports:
-      - "27017:27017"
+      - "27018:27017"
     # Запускаем с настройкой реплика-сета
     command: ["--replSet", "rs0", "--bind_ip_all"]
     volumes:
@@ -19,7 +19,35 @@ services:
     image: redis:alpine
     container_name: auction_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auction_backend
+    environment:
+      - PORT=3000
+      - MONGO_URL=mongodb://mongodb:27017/auction_db?replicaSet=rs0
+      - REDIS_URL=redis://redis:6379
+      - ADMIN_TOKEN=admin
+    ports:
+      - "3001:3000"
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE=http://localhost:3001
+    container_name: auction_frontend
+    ports:
+      - "4174:4173"
+    depends_on:
+      - backend
 
 volumes:
   mongo_data:

@@ -1,16 +1,30 @@
-import mongoose from 'mongoose';
+import { Schema, model, HydratedDocument, InferSchemaType, Model } from "mongoose";
 
-// 1. Создаем интерфейс (для TypeScript) - аналог dataclass/pydantic
-interface IUser {
-  username: string;
-  balance: number;
-}
+const PaymentMethodSchema = new Schema(
+  {
+    type: { type: String, enum: ["card", "crypto"], required: true },
+    masked: { type: String, required: true }, // last4 или короткий адрес
+    provider: { type: String },
+  },
+  { _id: false }
+);
 
-// 2. Создаем Схему (для MongoDB) - аналог SQLAlchemy Model
-const UserSchema = new mongoose.Schema<IUser>({
-  username: { type: String, required: true, unique: true },
-  balance: { type: Number, default: 0 } // Mongoose не даст записать сюда текст
-});
+const UserSchema = new Schema(
+  {
+    username: { type: String, required: true, unique: true, trim: true },
+    balance: { type: Number, default: 0, min: 0 },
+    heldBalance: { type: Number, default: 0, min: 0 },
+    prizeBalance: { type: Number, default: 0, min: 0 },
+    paymentMethod: { type: PaymentMethodSchema, required: false },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
 
-// 3. Экспортируем модель
-export const User = mongoose.model<IUser>('User', UserSchema);
+export type User = InferSchemaType<typeof UserSchema>;
+export type UserDocument = HydratedDocument<User>;
+export type UserModel = Model<User>;
+
+export const UserCollection = model<User>("User", UserSchema);
