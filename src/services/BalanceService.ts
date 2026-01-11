@@ -1,5 +1,6 @@
 import { BalanceLedgerCollection } from "../models/BalanceLedger";
 import { UserCollection, UserDocument } from "../models/User";
+import { transactionService } from "./TransactionService";
 
 class BalanceService {
   async ensureUser(username: string): Promise<UserDocument> {
@@ -17,6 +18,14 @@ class BalanceService {
     const user = await this.ensureUser(username);
     user.paymentMethod = method;
     await user.save();
+    await transactionService.record({
+      user: username,
+      type: "LINK_PAYMENT",
+      amount: 0,
+      currency: "TON",
+      auctionId: undefined,
+      meta: { method },
+    });
     return user;
   }
 
@@ -24,6 +33,13 @@ class BalanceService {
     const user = await this.ensureUser(username);
     user.balance += amount;
     await user.save();
+    await transactionService.record({
+      user: username,
+      type: "DEPOSIT",
+      amount,
+      currency: "TON",
+      auctionId: undefined,
+    });
     return user;
   }
 
@@ -38,6 +54,13 @@ class BalanceService {
     amount: number
   ) {
     await BalanceLedgerCollection.create({ user, auctionId, type, amount });
+    await transactionService.record({
+      user,
+      auctionId,
+      type: type === "PRIZE" ? "PRIZE" : type,
+      amount,
+      currency: "TON",
+    });
   }
 
   async releaseHold(user: UserDocument, auctionId: string, amount: number) {

@@ -4,6 +4,7 @@ import CreateAuctionPage from "../pages/CreateAuctionPage";
 import AuctionPage from "../pages/AuctionPage";
 import AdminBotsPage from "../pages/AdminBotsPage";
 import ProfilePage from "../pages/ProfilePage";
+import TransactionsPage from "../pages/TransactionsPage";
 
 function App() {
   return (
@@ -13,6 +14,9 @@ function App() {
           <strong>Telegram Gift Auctions Demo</strong>
         </Link>
         <div className="spacer" />
+        <Link to="/" className="btn secondary">
+          Аукционы
+        </Link>
         <Link to="/create" className="btn secondary">
           Create Auction
         </Link>
@@ -22,6 +26,9 @@ function App() {
         <Link to="/profile" className="btn secondary">
           Profile
         </Link>
+        <Link to="/transactions" className="btn secondary">
+          Transactions
+        </Link>
       </header>
 
       <Routes>
@@ -30,6 +37,7 @@ function App() {
         <Route path="/auctions/:id" element={<AuctionPage />} />
         <Route path="/admin" element={<AdminBotsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/transactions" element={<TransactionsPage />} />
       </Routes>
     </div>
   );

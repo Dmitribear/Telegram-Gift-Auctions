@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { adminApi, BotConfig } from "../entities/admin/api/adminApi";
+import {
+  adminApi,
+  BotApiKey,
+  BotConfig,
+  Transaction,
+} from "../entities/admin/api/adminApi";
 import { ErrorBox } from "../shared/ui/error-box";
 import { Loader } from "../shared/ui/loader";
 
@@ -18,6 +23,9 @@ export default function AdminBotsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [keys, setKeys] = useState<BotApiKey[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [keyName, setKeyName] = useState("bot-key");
 
   const loadConfig = async () => {
     if (!token) {
@@ -39,6 +47,58 @@ export default function AdminBotsPage() {
   useEffect(() => {
     // no auto load without token
   }, []);
+
+  const loadKeys = async () => {
+    if (!token) return;
+    try {
+      const ks = await adminApi.listKeys(token);
+      setKeys(ks);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadTx = async () => {
+    if (!token) return;
+    try {
+      const tx = await adminApi.listTransactions(token, { limit: 50 });
+      setTransactions(tx);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const createKey = async () => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await adminApi.createKey(token, keyName || "bot-key");
+      setSuccess("API key created");
+      await loadKeys();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeKey = async (id: string) => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await adminApi.revokeKey(token, id);
+      setSuccess("API key revoked");
+      await loadKeys();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +252,102 @@ export default function AdminBotsPage() {
           </button>
         </div>
       </form>
+
+      <div className="card" style={{ display: "grid", gap: 10 }}>
+        <h4 style={{ margin: 0 }}>Bot API keys</h4>
+        <div className="row">
+          <div style={{ flex: 1, minWidth: 140, display: "grid", gap: 6 }}>
+            <label htmlFor="keyName">Name</label>
+            <input
+              id="keyName"
+              value={keyName}
+              onChange={(e) => setKeyName(e.target.value)}
+              placeholder="bot-key"
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="btn secondary" type="button" onClick={createKey} disabled={loading}>
+              Create key
+            </button>
+            <button
+              className="btn secondary"
+              type="button"
+              style={{ marginLeft: 8 }}
+              onClick={loadKeys}
+              disabled={loading}
+            >
+              Refresh keys
+            </button>
+          </div>
+        </div>
+        <div className="list">
+          {keys.map((k) => (
+            <div
+              key={k._id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                padding: "8px 12px",
+              }}
+            >
+              <div style={{ display: "grid" }}>
+                <strong>{k.name}</strong>
+                <span style={{ fontSize: 12, color: "#475569" }}>
+                  {k.apiKey.slice(0, 8)}…{k.apiKey.slice(-4)}
+                </span>
+                <span style={{ fontSize: 12, color: k.active ? "#15803d" : "#b91c1c" }}>
+                  {k.active ? "active" : "revoked"}
+                </span>
+              </div>
+              {k.active && (
+                <button className="btn secondary" type="button" onClick={() => revokeKey(k._id)}>
+                  Revoke
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h4 style={{ margin: 0 }}>Transactions (last 50)</h4>
+          <button className="btn secondary" type="button" onClick={loadTx} disabled={loading}>
+            Refresh
+          </button>
+        </div>
+        <div className="list">
+          {transactions.map((t) => (
+            <div
+              key={t._id}
+              style={{
+                display: "grid",
+                gap: 4,
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                padding: "8px 12px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <strong>{t.type}</strong>
+                <span style={{ fontSize: 12, color: "#475569" }}>
+                  {new Date(t.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <div style={{ fontSize: 14 }}>
+                {t.amount} {t.currency} · user: {t.user}
+              </div>
+              {t.auctionId && (
+                <div style={{ fontSize: 12, color: "#475569" }}>auction: {t.auctionId}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { userApi, User } from "../entities/user/api/userApi";
+import { adminApi, Transaction } from "../entities/admin/api/adminApi";
 import { ErrorBox } from "../shared/ui/error-box";
 import { Loader } from "../shared/ui/loader";
 
@@ -12,6 +13,7 @@ export default function ProfilePage() {
   const [paymentMasked, setPaymentMasked] = useState("****1234");
   const [depositAmount, setDepositAmount] = useState("100");
   const [success, setSuccess] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const loadProfile = async () => {
     setLoading(true);
@@ -20,6 +22,8 @@ export default function ProfilePage() {
     try {
       const u = await userApi.me(username);
       setUser(u);
+      const tx = await adminApi.listTransactions("", { user: username, limit: 20 });
+      setTransactions(tx);
     } catch (err) {
       setError((err as Error).message);
       setUser(null);
@@ -153,6 +157,39 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {transactions.length > 0 && (
+        <div className="card" style={{ display: "grid", gap: 10 }}>
+          <h4 style={{ margin: 0 }}>Transactions (last 20)</h4>
+          <div className="list">
+            {transactions.map((t) => (
+              <div
+                key={t._id}
+                style={{
+                  display: "grid",
+                  gap: 4,
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{t.type}</strong>
+                  <span style={{ fontSize: 12, color: "#475569" }}>
+                    {new Date(t.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ fontSize: 14 }}>
+                  {t.amount} {t.currency}
+                </div>
+                {t.auctionId && (
+                  <div style={{ fontSize: 12, color: "#475569" }}>auction: {t.auctionId}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -96,12 +96,15 @@ VITE_API_BASE=http://localhost:3000
 - `/create` — форма создания, disable на submit, success/err, redirect на созданный аукцион (есть опциональный лимит ставок ботов).
 - `/auctions/:id` — детали, статус, текущий раунд, таймер, список ставок, форма ставки, авто-поллинг каждые ~4s.
 - `/profile` — кошелёк: привязка платёжки (card/crypto), депозиты, балансы wallet/held/prize.
+- `/transactions` — просмотр транзакций (фильтр по user).
 
 ## Админ-панель и боты
 - UI: `/admin` — управление ботами (без токена в демо-режиме).
 - Настройки: `enabled`, количество ботов, задержки между ставками, окно анти-снайпа, лимит `maxBidAmount` (боты не ставят выше).
 - Бэкенд: `POST /admin/login`, `GET/POST /admin/bots`.
 - Сервис ботов: `src/services/BotService.ts` — держит интервалы и случайные ставки `bot-{id}`.
+- Bot API keys: `/bot-api` (list/create/revoke), пример ставок бота по `X-API-Key` — `POST /bot-api/bid { auctionId, amount }`.
+- Транзакции: `/transactions` (GET, фильтры user/type/limit).
 
 ## Нагрузочные и бот-скрипты (Node 18+)
 - `scripts/bots/bid-bot.ts` — простые боты. Запуск: `API_BASE=http://localhost:3000 BOTS=5 ts-node scripts/bots/bid-bot.ts`.
@@ -119,6 +122,7 @@ VITE_API_BASE=http://localhost:3000
 - При ставке создаётся hold (`heldBalance` и запись в `BalanceLedger`), предыдущему лидеру hold освобождается. Для ботов автоплатёжка и авто-пополнение.
 - Если баланс < суммы — ставка отклоняется.
 - Призы: при финализации победителю списывается hold и начисляется `prizeBalance`.
+- Транзакции-аудит: DEPOSIT/LINK/HOLD/RELEASE/CHARGE/PRIZE/BOT_FUND.
 
 ## Завершение аукциона (финализация)
 - Endpoint: `POST /auctions/:id/finalize` — отмечает аукцион завершённым.
