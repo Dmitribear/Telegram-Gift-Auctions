@@ -20,4 +20,5 @@ export const auctionApi = {
       method: "POST",
       body: JSON.stringify({ amount, user }),
     }),
+  finalize: (id: string) => request<Auction>(`/auctions/${id}/finalize`, { method: "POST" }),
 };

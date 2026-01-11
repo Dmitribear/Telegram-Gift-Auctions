@@ -46,6 +46,8 @@ const AuctionSchema = new Schema(
       required: true,
       min: [1, "maxParticipantsPerRound must be > 0"],
     },
+    totalRounds: { type: Number, default: 1, min: 1 },
+    prizesCount: { type: Number, default: 1, min: 1 },
     currentRound: { type: Number, default: 0, min: 0 },
     endsAt: { type: Date, required: false },
     antiSnipeWindowSeconds: { type: Number, default: 10, min: 0 },
@@ -54,6 +56,12 @@ const AuctionSchema = new Schema(
     winningBid: { type: Number, required: false, min: 0 },
     finishedAt: { type: Date, required: false },
     botMaxBidAmount: { type: Number, required: false, min: 0 },
+    winners: [
+      {
+        user: { type: String, required: true },
+        amount: { type: Number, required: true, min: 0 },
+      },
+    ],
   },
   {
     timestamps: true,

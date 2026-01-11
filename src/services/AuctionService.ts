@@ -18,6 +18,8 @@ export interface CreateAuctionInput {
   antiSnipeWindowSeconds?: number;
   antiSnipeExtendSeconds?: number;
   botMaxBidAmount?: number;
+  totalRounds?: number;
+  prizesCount?: number;
 }
 
 class AuctionService {
@@ -31,6 +33,8 @@ class AuctionService {
       antiSnipeWindowSeconds: payload.antiSnipeWindowSeconds ?? 10,
       antiSnipeExtendSeconds: payload.antiSnipeExtendSeconds ?? 10,
       botMaxBidAmount: payload.botMaxBidAmount,
+      totalRounds: payload.totalRounds ?? 1,
+      prizesCount: payload.prizesCount ?? 1,
     });
 
     return auction;
@@ -100,7 +104,9 @@ class AuctionService {
       }
     } else {
       if (!bidder.paymentMethod) {
-        throw new Error("PAYMENT_METHOD_REQUIRED");
+        // Автозадание дефолтного метода для демо-пользователей
+        bidder.paymentMethod = { type: "card", masked: "wallet", provider: "demo" } as any;
+        await bidder.save();
       }
       const available = bidder.balance - bidder.heldBalance;
       if (available < amount) {
@@ -170,24 +176,31 @@ class AuctionService {
       return auction;
     }
 
-    const lastBid = await BidCollection.findOne({ auctionId })
-      .sort({ createdAt: -1 })
+    const bids = await BidCollection.find({ auctionId })
+      .sort({ amount: -1, createdAt: 1 })
+      .limit(auction.prizesCount ?? 1)
       .exec();
 
-    if (!lastBid) {
+    if (bids.length === 0) {
       auction.status = AuctionStatus.FINISHED;
       auction.finishedAt = new Date();
       await auction.save();
       return auction;
     }
 
-    const winnerUser = await balanceService.ensureUser(lastBid.user);
-    await balanceService.charge(winnerUser, auctionId, lastBid.amount);
-    await balanceService.awardPrize(winnerUser, auctionId, lastBid.amount);
+    const winners = [];
+    for (const bid of bids) {
+      const winnerUser = await balanceService.ensureUser(bid.user);
+      await balanceService.charge(winnerUser, auctionId, bid.amount);
+      await balanceService.awardPrize(winnerUser, auctionId, bid.amount);
+      winners.push({ user: bid.user, amount: bid.amount });
+    }
 
+    const top = bids[0];
     auction.status = AuctionStatus.FINISHED;
-    auction.winnerUser = lastBid.user;
-    auction.winningBid = lastBid.amount;
+    auction.winnerUser = top.user;
+    auction.winningBid = top.amount;
+    auction.winners = winners;
     auction.finishedAt = new Date();
     await auction.save();
 

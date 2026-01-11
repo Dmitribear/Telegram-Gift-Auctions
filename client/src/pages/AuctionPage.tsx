@@ -37,6 +37,7 @@ export default function AuctionPage() {
       const data = await auctionApi.getById(id);
       setState({ data, loading: false, error: null });
       updateCountdown(data.auction);
+      await autoFinalize(data.auction);
     } catch (err) {
       setState({
         data: null,
@@ -122,6 +123,13 @@ export default function AuctionPage() {
     }
   };
 
+  const autoFinalize = async (auction: Auction) => {
+    if (auction.status === "FINISHED") return;
+    if (!auction.endsAt) return;
+    if (new Date(auction.endsAt).getTime() > Date.now()) return;
+    await auctionApi.finalize(auction._id);
+  };
+
   const auction: Auction | undefined = state.data?.auction;
   const bids: Bid[] = state.data?.bids ?? [];
 
@@ -141,8 +149,10 @@ export default function AuctionPage() {
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <span>Round: {auction.currentRound}</span>
+            {auction.totalRounds && <span>Total rounds: {auction.totalRounds}</span>}
             <span>Min step: {auction.minBidStep}</span>
             <span>Round duration: {auction.roundDurationSeconds}s</span>
+            {auction.prizesCount && <span>Prizes: {auction.prizesCount}</span>}
             {auction.endsAt && (
               <span>
                 Ends at: {new Date(auction.endsAt).toLocaleTimeString()}
@@ -178,6 +188,14 @@ export default function AuctionPage() {
               <button className="btn" type="submit" disabled={submitting}>
                 {submitting ? "Placing..." : "Place Bid"}
               </button>
+              <button
+                className="btn secondary"
+                type="button"
+                disabled={submitting}
+                onClick={() => auctionApi.finalize(auction._id).then(() => fetchData(true))}
+              >
+                Finalize now
+              </button>
               <span style={{ fontSize: 13, color: "#475569" }}>
                 Min next bid: {minNextBid.toFixed(2)}
               </span>
@@ -194,6 +212,14 @@ export default function AuctionPage() {
               {bids.length} total
             </span>
           </div>
+          {auction.winners && auction.winners.length > 0 && (
+            <div style={{ fontSize: 14, color: "#15803d" }}>
+              Winners:{" "}
+              {auction.winners
+                .map((w) => `${w.user} (${w.amount})`)
+                .join(", ")}
+            </div>
+          )}
           <div className="list">
             {bids.map((bid) => (
               <div

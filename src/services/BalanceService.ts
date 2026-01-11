@@ -77,11 +77,14 @@ class BalanceService {
   }
 
   async charge(user: UserDocument, auctionId: string, amount: number) {
-    if (user.balance < amount || user.heldBalance < amount) {
+    const total = user.balance + user.heldBalance;
+    if (total < amount) {
       throw new Error("INSUFFICIENT_FUNDS");
     }
-    user.heldBalance -= amount;
-    user.balance -= amount;
+    const fromHeld = Math.min(user.heldBalance, amount);
+    user.heldBalance -= fromHeld;
+    const rest = amount - fromHeld;
+    if (rest > 0) user.balance -= rest;
     await user.save();
     await this.addLedger(user.username, auctionId, "CHARGE", amount);
   }

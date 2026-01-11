@@ -30,6 +30,8 @@ const parseAndValidate = (
   const antiSnipeWindowSeconds = toNumber(body.antiSnipeWindowSeconds);
   const antiSnipeExtendSeconds = toNumber(body.antiSnipeExtendSeconds);
   const botMaxBidAmount = toNumber(body.botMaxBidAmount);
+  const totalRounds = toNumber(body.totalRounds);
+  const prizesCount = toNumber(body.prizesCount);
 
   if (!title) errors.push("title is required and must be non-empty");
   if (!Number.isFinite(startingPrice) || startingPrice < 0)
@@ -55,6 +57,16 @@ const parseAndValidate = (
     (!Number.isFinite(botMaxBidAmount) || botMaxBidAmount < 0)
   )
     errors.push("botMaxBidAmount must be >= 0");
+  if (
+    body.totalRounds !== undefined &&
+    (!Number.isFinite(totalRounds) || totalRounds < 1)
+  )
+    errors.push("totalRounds must be >= 1");
+  if (
+    body.prizesCount !== undefined &&
+    (!Number.isFinite(prizesCount) || prizesCount < 1)
+  )
+    errors.push("prizesCount must be >= 1");
 
   if (errors.length) return { errors };
 
@@ -79,6 +91,10 @@ const parseAndValidate = (
         Number.isFinite(botMaxBidAmount) && botMaxBidAmount >= 0
           ? botMaxBidAmount
           : undefined,
+      totalRounds:
+        Number.isFinite(totalRounds) && totalRounds >= 1 ? totalRounds : undefined,
+      prizesCount:
+        Number.isFinite(prizesCount) && prizesCount >= 1 ? prizesCount : undefined,
     },
   };
 };

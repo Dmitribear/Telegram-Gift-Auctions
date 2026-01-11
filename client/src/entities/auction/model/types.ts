@@ -14,6 +14,9 @@ export interface Auction {
   antiSnipeWindowSeconds?: number;
   antiSnipeExtendSeconds?: number;
   botMaxBidAmount?: number;
+  totalRounds?: number;
+  prizesCount?: number;
+  winners?: { user: string; amount: number }[];
   createdAt: string;
   updatedAt: string;
 }

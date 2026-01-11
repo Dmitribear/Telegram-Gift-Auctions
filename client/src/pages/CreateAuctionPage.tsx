@@ -11,6 +11,8 @@ type FormState = {
   roundDurationSeconds: string;
   maxParticipantsPerRound: string;
   botMaxBidAmount: string;
+  totalRounds: string;
+  prizesCount: string;
 };
 
 const initialForm: FormState = {
@@ -21,6 +23,8 @@ const initialForm: FormState = {
   roundDurationSeconds: "60",
   maxParticipantsPerRound: "10",
   botMaxBidAmount: "",
+  totalRounds: "1",
+  prizesCount: "1",
 };
 
 export default function CreateAuctionPage() {
@@ -55,6 +59,8 @@ export default function CreateAuctionPage() {
           form.botMaxBidAmount.trim() === ""
             ? undefined
             : Number(form.botMaxBidAmount),
+        totalRounds: Number(form.totalRounds),
+        prizesCount: Number(form.prizesCount),
       };
 
       const auction = await auctionApi.create(payload);
@@ -158,6 +164,33 @@ export default function CreateAuctionPage() {
             onChange={handleChange}
             placeholder="e.g. 500"
           />
+        </div>
+
+        <div className="row">
+          <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
+            <label htmlFor="totalRounds">Total rounds</label>
+            <input
+              id="totalRounds"
+              name="totalRounds"
+              type="number"
+              min={1}
+              value={form.totalRounds}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
+            <label htmlFor="prizesCount">Prizes count</label>
+            <input
+              id="prizesCount"
+              name="prizesCount"
+              type="number"
+              min={1}
+              value={form.prizesCount}
+              onChange={handleChange}
+              required
+            />
+          </div>
         </div>
 
         {error && <ErrorBox message={error} />}
