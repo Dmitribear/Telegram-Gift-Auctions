@@ -150,7 +150,7 @@ export default function AuctionPage() {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <span>Round: {auction.currentRound}</span>
             {auction.totalRounds && <span>Total rounds: {auction.totalRounds}</span>}
-            <span>Min step: {auction.minBidStep}</span>
+            <span>Min step: {auction.minBidStep} TON</span>
             <span>Round duration: {auction.roundDurationSeconds}s</span>
             {auction.prizesCount && <span>Prizes: {auction.prizesCount}</span>}
             {auction.endsAt && (
@@ -197,7 +197,7 @@ export default function AuctionPage() {
                 Finalize now
               </button>
               <span style={{ fontSize: 13, color: "#475569" }}>
-                Min next bid: {minNextBid.toFixed(2)}
+                Min next bid: {minNextBid.toFixed(2)} TON
               </span>
             </div>
           </form>
@@ -216,7 +216,7 @@ export default function AuctionPage() {
             <div style={{ fontSize: 14, color: "#15803d" }}>
               Winners:{" "}
               {auction.winners
-                .map((w) => `${w.user} (${w.amount})`)
+                .map((w) => `${w.user} (${w.amount} TON)`)
                 .join(", ")}
             </div>
           )}
@@ -240,7 +240,7 @@ export default function AuctionPage() {
                     {new Date(bid.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <div style={{ fontWeight: 700 }}>{bid.amount}</div>
+                <div style={{ fontWeight: 700 }}>{bid.amount} TON</div>
                 <div style={{ fontSize: 12, color: "#475569" }}>
                   Round {bid.round}
                 </div>

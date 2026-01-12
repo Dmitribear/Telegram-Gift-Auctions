@@ -188,7 +188,7 @@ class AuctionService {
       return auction;
     }
 
-    const winners = [];
+    const winners: { user: string; amount: number }[] = [];
     for (const bid of bids) {
       const winnerUser = await balanceService.ensureUser(bid.user);
       await balanceService.charge(winnerUser, auctionId, bid.amount);
@@ -200,7 +200,7 @@ class AuctionService {
     auction.status = AuctionStatus.FINISHED;
     auction.winnerUser = top.user;
     auction.winningBid = top.amount;
-    auction.winners = winners;
+    auction.winners = winners as any;
     auction.finishedAt = new Date();
     await auction.save();
 

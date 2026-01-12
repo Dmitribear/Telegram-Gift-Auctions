@@ -47,11 +47,7 @@ export class UserController {
       res.status(400).json({ error: "username required" });
       return;
     }
-    const user = await balanceService.get(username);
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+    const user = await balanceService.ensureUser(username);
     res.json(user);
   };
 }

@@ -8,6 +8,7 @@ import userRoutes from "./api/routes/user.routes";
 import authRoutes from "./api/routes/auth.routes";
 import botApiRoutes from "./api/routes/botapi.routes";
 import transactionRoutes from "./api/routes/transaction.routes";
+import walletRoutes from "./api/routes/wallet.routes";
 import promClient from "prom-client";
 
 const app = express();
@@ -49,6 +50,7 @@ app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
 app.use("/bot-api", botApiRoutes);
 app.use("/transactions", transactionRoutes);
+app.use("/wallet", walletRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });

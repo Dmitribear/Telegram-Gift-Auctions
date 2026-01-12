@@ -12,7 +12,17 @@ const TransactionSchema = new Schema(
     auctionId: { type: Schema.Types.ObjectId, ref: "Auction", required: false },
     type: {
       type: String,
-      enum: ["DEPOSIT", "HOLD", "RELEASE", "CHARGE", "PRIZE", "LINK_PAYMENT", "BOT_FUND"],
+      enum: [
+        "DEPOSIT",
+        "HOLD",
+        "RELEASE",
+        "CHARGE",
+        "PRIZE",
+        "LINK_PAYMENT",
+        "BOT_FUND",
+        "BRIDGE_IN",
+        "BRIDGE_OUT",
+      ],
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },

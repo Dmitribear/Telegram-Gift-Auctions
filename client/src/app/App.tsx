@@ -5,6 +5,7 @@ import AuctionPage from "../pages/AuctionPage";
 import AdminBotsPage from "../pages/AdminBotsPage";
 import ProfilePage from "../pages/ProfilePage";
 import TransactionsPage from "../pages/TransactionsPage";
+import WalletPage from "../pages/WalletPage";
 
 function App() {
   return (
@@ -29,6 +30,9 @@ function App() {
         <Link to="/transactions" className="btn secondary">
           Transactions
         </Link>
+        <a href="/wallet" target="_blank" rel="noreferrer" className="btn secondary">
+          Wallet
+        </a>
       </header>
 
       <Routes>
@@ -38,6 +42,7 @@ function App() {
         <Route path="/admin" element={<AdminBotsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/wallet" element={<WalletPage />} />
       </Routes>
     </div>
   );

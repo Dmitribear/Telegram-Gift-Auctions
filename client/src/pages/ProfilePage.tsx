@@ -98,9 +98,9 @@ export default function ProfilePage() {
       {user && (
         <div className="card" style={{ display: "grid", gap: 8 }}>
           <strong>Balances</strong>
-          <div>Wallet: {user.balance.toFixed(2)}</div>
-          <div>Held: {user.heldBalance.toFixed(2)}</div>
-          <div>Prize: {(user.prizeBalance ?? 0).toFixed(2)}</div>
+          <div>Wallet: {user.balance.toFixed(2)} TON</div>
+          <div>Held: {user.heldBalance.toFixed(2)} TON</div>
+          <div>Prize: {(user.prizeBalance ?? 0).toFixed(2)} TON</div>
           {user.paymentMethod && (
             <div style={{ fontSize: 13, color: "#475569" }}>
               Payment: {user.paymentMethod.type} ({user.paymentMethod.masked})
