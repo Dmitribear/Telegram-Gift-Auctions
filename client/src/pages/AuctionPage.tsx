@@ -181,7 +181,10 @@ export default function AuctionPage() {
               step="0.01"
               value={bidAmount}
               placeholder={`>= ${minNextBid.toFixed(2)}`}
-              onChange={(e) => setBidAmount(e.target.value)}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                setBidAmount(cleaned);
+              }}
               disabled={submitting}
             />
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>

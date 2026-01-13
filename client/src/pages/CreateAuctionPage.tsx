@@ -37,8 +37,10 @@ export default function CreateAuctionPage() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const cleaned =
+      type === "number" ? value.replace(/^0+(?=\d)/, "") : value;
+    setForm((prev) => ({ ...prev, [name]: cleaned }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

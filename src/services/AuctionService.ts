@@ -6,6 +6,7 @@ import {
 } from "../models/Auction.model";
 import { BidCollection, BidDocument } from "../models/Bid";
 import { balanceService } from "./BalanceService";
+import { walletService } from "./WalletService";
 import { UserCollection } from "../models/User";
 
 export interface CreateAuctionInput {
@@ -120,17 +121,27 @@ class AuctionService {
     if (lastBid) {
       if (lastBid.user === bidder.username) {
         await balanceService.releaseHold(bidder, auctionId, lastBid.amount);
+        await walletService.refundToWallet(
+          bidder.username,
+          lastBid.amount,
+          "outbid_self"
+        );
       } else {
         const prevLeader = await UserCollection.findOne({
           username: lastBid.user,
         }).exec();
         if (prevLeader) {
           await balanceService.releaseHold(prevLeader, auctionId, lastBid.amount);
+          await walletService.refundToWallet(
+            prevLeader.username,
+            lastBid.amount,
+            "outbid_by_other"
+          );
         }
       }
     }
 
-    // Hold bidder funds
+    // Hold bidder funds (резервируем с баланса)
     await balanceService.hold(bidder, auctionId, amount);
 
     const round = auction.currentRound + 1;
@@ -190,7 +201,13 @@ class AuctionService {
 
     const winners: { user: string; amount: number }[] = [];
     for (const bid of bids) {
-      const winnerUser = await balanceService.ensureUser(bid.user);
+      let winnerUser = await balanceService.ensureUser(bid.user);
+      const total = winnerUser.balance + winnerUser.heldBalance;
+      if (total < bid.amount) {
+        const diff = bid.amount - total;
+        await walletService.bridgeToSite(bid.user, diff);
+        winnerUser = await balanceService.ensureUser(bid.user);
+      }
       await balanceService.charge(winnerUser, auctionId, bid.amount);
       await balanceService.awardPrize(winnerUser, auctionId, bid.amount);
       winners.push({ user: bid.user, amount: bid.amount });

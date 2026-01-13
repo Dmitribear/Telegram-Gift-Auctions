@@ -65,12 +65,18 @@ class BalanceService {
 
   async releaseHold(user: UserDocument, auctionId: string, amount: number) {
     if (amount <= 0) return;
-    user.heldBalance = Math.max(0, user.heldBalance - amount);
+    const release = Math.min(user.heldBalance, amount);
+    user.heldBalance = Math.max(0, user.heldBalance - release);
     await user.save();
     await this.addLedger(user.username, auctionId, "RELEASE", amount);
   }
 
   async hold(user: UserDocument, auctionId: string, amount: number) {
+    if (amount <= 0) return;
+    if (user.balance < amount) {
+      throw new Error("INSUFFICIENT_FUNDS");
+    }
+    user.balance -= amount;
     user.heldBalance += amount;
     await user.save();
     await this.addLedger(user.username, auctionId, "HOLD", amount);

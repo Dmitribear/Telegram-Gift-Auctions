@@ -120,6 +120,11 @@ export default function AdminBotsPage() {
     }
   };
 
+  const sanitizeNumber = (val: string) => {
+    const cleaned = val.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
+    return cleaned === "" ? "0" : cleaned;
+  };
+
   return (
     <div className="card" style={{ display: "grid", gap: 16 }}>
       <h2 style={{ margin: 0 }}>Admin: Bot control</h2>
@@ -157,7 +162,7 @@ export default function AdminBotsPage() {
               min={0}
               value={config.bots}
               onChange={(e) =>
-                setConfig((c) => ({ ...c, bots: Number(e.target.value) }))
+                setConfig((c) => ({ ...c, bots: Number(sanitizeNumber(e.target.value)) }))
               }
             />
           </div>
@@ -169,7 +174,7 @@ export default function AdminBotsPage() {
               min={500}
               value={config.minDelayMs}
               onChange={(e) =>
-                setConfig((c) => ({ ...c, minDelayMs: Number(e.target.value) }))
+                setConfig((c) => ({ ...c, minDelayMs: Number(sanitizeNumber(e.target.value)) }))
               }
             />
           </div>
@@ -181,7 +186,7 @@ export default function AdminBotsPage() {
               min={config.minDelayMs}
               value={config.maxDelayMs}
               onChange={(e) =>
-                setConfig((c) => ({ ...c, maxDelayMs: Number(e.target.value) }))
+                setConfig((c) => ({ ...c, maxDelayMs: Number(sanitizeNumber(e.target.value)) }))
               }
             />
           </div>
@@ -198,7 +203,7 @@ export default function AdminBotsPage() {
               onChange={(e) =>
                 setConfig((c) => ({
                   ...c,
-                  antiSnipeWindowSeconds: Number(e.target.value),
+                  antiSnipeWindowSeconds: Number(sanitizeNumber(e.target.value)),
                 }))
               }
             />
@@ -213,7 +218,7 @@ export default function AdminBotsPage() {
               onChange={(e) =>
                 setConfig((c) => ({
                   ...c,
-                  antiSnipeExtendSeconds: Number(e.target.value),
+                  antiSnipeExtendSeconds: Number(sanitizeNumber(e.target.value)),
                 }))
               }
             />
@@ -235,7 +240,9 @@ export default function AdminBotsPage() {
                 setConfig((c) => ({
                   ...c,
                   maxBidAmount:
-                    e.target.value === "" ? undefined : Number(e.target.value),
+                    e.target.value === ""
+                      ? undefined
+                      : Number(sanitizeNumber(e.target.value)),
                 }))
               }
             />

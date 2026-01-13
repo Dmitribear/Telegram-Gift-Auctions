@@ -112,6 +112,28 @@ class WalletService {
     });
     return w;
   }
+
+  async refundToWallet(user: string, amount: number, reason: string) {
+    if (amount <= 0) return;
+    const w = await this.ensureWallet(user);
+    w.balanceTon += amount;
+    w.tx.push({
+      type: "REFUND",
+      amount,
+      to: w.address,
+      hash: randomUUID(),
+      status: "confirmed",
+    });
+    await w.save();
+    await transactionService.record({
+      user,
+      type: "BRIDGE_OUT",
+      amount,
+      currency: "TON",
+      auctionId: undefined,
+      meta: { reason },
+    });
+  }
 }
 
 export const walletService = new WalletService();

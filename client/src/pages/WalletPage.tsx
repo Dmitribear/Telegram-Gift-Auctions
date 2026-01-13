@@ -57,10 +57,20 @@ export default function WalletPage() {
     setLoading(true);
     setError(null);
     try {
-      const w = await walletApi.send(user, Number(amount) || 0, sendTo);
+      const val = Number(amount) || 0;
+      // Если не хватает в кошельке — докидываем краном перед отправкой
+      if ((wallet?.balanceTon ?? 0) < val && val > 0) {
+        await walletApi.faucet(user, val);
+      }
+      const w = await walletApi.send(user, val, sendTo);
       setWallet(w);
     } catch (err) {
-      setError((err as Error).message || "Ошибка отправки");
+      const msg = (err as Error).message;
+      if (msg.includes("INSUFFICIENT_WALLET_FUNDS")) {
+        setError("Недостаточно TON в кошельке — нажми кран и пробуй снова.");
+      } else {
+        setError(msg || "Ошибка отправки");
+      }
     } finally {
       setLoading(false);
     }
@@ -218,7 +228,7 @@ export default function WalletPage() {
               id="amount"
               type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value.replace(/^0+(?=\d)/, ""))}
             />
           </div>
           <div style={{ flex: 1, minWidth: 140, display: "grid", gap: 6 }}>
@@ -249,7 +259,7 @@ export default function WalletPage() {
               id="bridgeAmount"
               type="number"
               value={bridgeAmount}
-              onChange={(e) => setBridgeAmount(e.target.value)}
+              onChange={(e) => setBridgeAmount(e.target.value.replace(/^0+(?=\d)/, ""))}
             />
           </div>
         </div>
