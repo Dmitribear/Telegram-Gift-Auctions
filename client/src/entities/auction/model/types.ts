@@ -1,32 +1,31 @@
-export type AuctionStatus = "CREATED" | "RUNNING" | "FINISHED";
+export type AuctionStatus = "scheduled" | "active" | "ended";
 
 export interface Auction {
   _id: string;
   title: string;
   description?: string;
   status: AuctionStatus;
-  startingPrice: number;
-  minBidStep: number;
-  roundDurationSeconds: number;
-  maxParticipantsPerRound: number;
-  currentRound: number;
-  endsAt?: string;
-  antiSnipeWindowSeconds?: number;
-  antiSnipeExtendSeconds?: number;
-  botMaxBidAmount?: number;
-  totalRounds?: number;
-  prizesCount?: number;
-  winners?: { user: string; amount: number }[];
+  startPrice: number;
+  bidStep: number;
+  currentPrice: number;
+  startTime: string;
+  endTime: string;
+  antiSnipeWindowMs?: number;
+  antiSnipeExtensionMs?: number;
+  bidsCount?: number;
+  highestBidder?: string;
+  highestBid?: string;
+  winnerUserId?: string;
+  winnerBidId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Bid {
   _id: string;
-  auctionId: string;
-  user: string;
+  auction: string;
+  user: string; // ObjectId as string
   amount: number;
-  round: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,8 +38,10 @@ export interface AuctionDetailsResponse {
 export interface CreateAuctionPayload {
   title: string;
   description?: string;
-  startingPrice: number;
-  minBidStep: number;
-  roundDurationSeconds: number;
-  maxParticipantsPerRound: number;
+  startPrice: number;
+  bidStep: number;
+  baseDurationMinutes: number;
+  startTime?: string;
+  antiSnipeWindowMinutes?: number;
+  antiSnipeExtensionMinutes?: number;
 }

@@ -6,7 +6,12 @@ class BalanceService {
   async ensureUser(username: string): Promise<UserDocument> {
     let user = await UserCollection.findOne({ username }).exec();
     if (!user) {
-      user = await UserCollection.create({ username, balance: 0, heldBalance: 0 });
+      user = await UserCollection.create({
+        username,
+        balance: 0,
+        lockedBalance: 0,
+        heldBalance: 0,
+      });
     }
     return user;
   }
@@ -65,8 +70,10 @@ class BalanceService {
 
   async releaseHold(user: UserDocument, auctionId: string, amount: number) {
     if (amount <= 0) return;
-    const release = Math.min(user.heldBalance, amount);
-    user.heldBalance = Math.max(0, user.heldBalance - release);
+    const release = Math.min(user.lockedBalance ?? user.heldBalance, amount);
+    user.lockedBalance = Math.max(0, (user.lockedBalance ?? 0) - release);
+    // оставляем heldBalance для обратной совместимости
+    user.heldBalance = Math.max(0, (user.heldBalance ?? 0) - release);
     await user.save();
     await this.addLedger(user.username, auctionId, "RELEASE", amount);
   }
@@ -77,18 +84,21 @@ class BalanceService {
       throw new Error("INSUFFICIENT_FUNDS");
     }
     user.balance -= amount;
-    user.heldBalance += amount;
+    user.lockedBalance = (user.lockedBalance ?? 0) + amount;
+    user.heldBalance = (user.heldBalance ?? 0) + amount;
     await user.save();
     await this.addLedger(user.username, auctionId, "HOLD", amount);
   }
 
   async charge(user: UserDocument, auctionId: string, amount: number) {
-    const total = user.balance + user.heldBalance;
+    const locked = user.lockedBalance ?? user.heldBalance ?? 0;
+    const total = user.balance + locked;
     if (total < amount) {
       throw new Error("INSUFFICIENT_FUNDS");
     }
-    const fromHeld = Math.min(user.heldBalance, amount);
-    user.heldBalance -= fromHeld;
+    const fromHeld = Math.min(locked, amount);
+    user.lockedBalance = Math.max(0, locked - fromHeld);
+    user.heldBalance = Math.max(0, (user.heldBalance ?? locked) - fromHeld);
     const rest = amount - fromHeld;
     if (rest > 0) user.balance -= rest;
     await user.save();

@@ -48,14 +48,8 @@ export default function AuctionPage() {
   };
 
   const updateCountdown = (auction: Auction) => {
-    if (auction.endsAt) {
-      const ms = new Date(auction.endsAt).getTime() - Date.now();
-      setCountdown(Math.max(0, Math.round(ms / 1000)));
-    } else if (auction.createdAt && auction.roundDurationSeconds) {
-      const endMs =
-        new Date(auction.createdAt).getTime() +
-        auction.roundDurationSeconds * 1000;
-      const ms = endMs - Date.now();
+    if (auction.endTime) {
+      const ms = new Date(auction.endTime).getTime() - Date.now();
       setCountdown(Math.max(0, Math.round(ms / 1000)));
     }
   };
@@ -79,7 +73,7 @@ export default function AuctionPage() {
     }, 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.data?.auction?.endsAt]);
+  }, [state.data?.auction?.endTime]);
 
   const lastBid = useMemo(() => {
     return state.data?.bids?.[0];
@@ -87,9 +81,8 @@ export default function AuctionPage() {
 
   const minNextBid = useMemo(() => {
     if (!state.data) return 0;
-    const base =
-      lastBid?.amount ?? state.data.auction.startingPrice;
-    return base + state.data.auction.minBidStep;
+    const base = lastBid?.amount ?? state.data.auction.startPrice;
+    return base + state.data.auction.bidStep;
   }, [lastBid, state.data]);
 
   const handleBidSubmit = async (e: React.FormEvent) => {
@@ -124,9 +117,9 @@ export default function AuctionPage() {
   };
 
   const autoFinalize = async (auction: Auction) => {
-    if (auction.status === "FINISHED") return;
-    if (!auction.endsAt) return;
-    if (new Date(auction.endsAt).getTime() > Date.now()) return;
+    if (auction.status === "ended") return;
+    if (!auction.endTime) return;
+    if (new Date(auction.endTime).getTime() > Date.now()) return;
     await auctionApi.finalize(auction._id);
   };
 
@@ -148,23 +141,19 @@ export default function AuctionPage() {
             {auction.description || "No description"}
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <span>Round: {auction.currentRound}</span>
-            {auction.totalRounds && <span>Total rounds: {auction.totalRounds}</span>}
-            <span>Min step: {auction.minBidStep} TON</span>
-            <span>Round duration: {auction.roundDurationSeconds}s</span>
-            {auction.prizesCount && <span>Prizes: {auction.prizesCount}</span>}
-            {auction.endsAt && (
-              <span>
-                Ends at: {new Date(auction.endsAt).toLocaleTimeString()}
-              </span>
+            <span>Start: {auction.startPrice} TON</span>
+            <span>Step: {auction.bidStep} TON</span>
+            <span>Current: {auction.currentPrice} TON</span>
+            {auction.endTime && (
+              <span>Ends at: {new Date(auction.endTime).toLocaleTimeString()}</span>
             )}
             {countdown !== null && (
               <span>Timer: {Math.max(0, countdown)}s</span>
             )}
-            {auction.antiSnipeWindowSeconds !== undefined && (
+            {auction.antiSnipeWindowMs !== undefined && (
               <span>
-                Anti-snipe: +{auction.antiSnipeExtendSeconds ?? 0}s if bid in last{" "}
-                {auction.antiSnipeWindowSeconds}s
+                Anti-snipe: +{(auction.antiSnipeExtensionMs ?? 0) / 1000}s if bid in last{" "}
+                {(auction.antiSnipeWindowMs ?? 0) / 1000}s
               </span>
             )}
           </div>
@@ -215,14 +204,6 @@ export default function AuctionPage() {
               {bids.length} total
             </span>
           </div>
-          {auction.winners && auction.winners.length > 0 && (
-            <div style={{ fontSize: 14, color: "#15803d" }}>
-              Winners:{" "}
-              {auction.winners
-                .map((w) => `${w.user} (${w.amount} TON)`)
-                .join(", ")}
-            </div>
-          )}
           <div className="list">
             {bids.map((bid) => (
               <div
@@ -244,9 +225,6 @@ export default function AuctionPage() {
                   </span>
                 </div>
                 <div style={{ fontWeight: 700 }}>{bid.amount} TON</div>
-                <div style={{ fontSize: 12, color: "#475569" }}>
-                  Round {bid.round}
-                </div>
               </div>
             ))}
           </div>

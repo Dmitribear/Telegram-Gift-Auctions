@@ -13,7 +13,8 @@ const UserSchema = new Schema(
   {
     username: { type: String, required: true, unique: true, trim: true },
     balance: { type: Number, default: 0, min: 0 },
-    heldBalance: { type: Number, default: 0, min: 0 },
+    lockedBalance: { type: Number, default: 0, min: 0 }, // каноничное поле
+    heldBalance: { type: Number, default: 0, min: 0 }, // для совместимости со старым кодом
     prizeBalance: { type: Number, default: 0, min: 0 },
     paymentMethod: { type: PaymentMethodSchema, required: false },
   },

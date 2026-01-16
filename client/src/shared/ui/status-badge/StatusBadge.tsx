@@ -2,10 +2,10 @@ import { AuctionStatus } from "../../../entities/auction";
 
 type Props = { status: AuctionStatus };
 
-const color = {
-  CREATED: "created",
-  RUNNING: "running",
-  FINISHED: "finished",
+const color: Record<AuctionStatus, string> = {
+  scheduled: "created",
+  active: "running",
+  ended: "finished",
 };
 
 export function StatusBadge({ status }: Props) {

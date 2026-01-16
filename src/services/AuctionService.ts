@@ -12,37 +12,44 @@ import { UserCollection } from "../models/User";
 export interface CreateAuctionInput {
   title: string;
   description?: string;
-  startingPrice: number;
-  minBidStep: number;
-  roundDurationSeconds: number;
-  maxParticipantsPerRound: number;
-  antiSnipeWindowSeconds?: number;
-  antiSnipeExtendSeconds?: number;
-  botMaxBidAmount?: number;
-  totalRounds?: number;
-  prizesCount?: number;
+  startPrice: number;
+  bidStep: number;
+  baseDurationMinutes: number;
+  startTime?: string | Date;
+  antiSnipeWindowMinutes?: number;
+  antiSnipeExtensionMinutes?: number;
 }
 
 class AuctionService {
-  // Отдельный слой, чтобы менять бизнес-правила без переписывания контроллеров
   async createAuction(payload: CreateAuctionInput): Promise<AuctionDocument> {
+    const startTime = payload.startTime ? new Date(payload.startTime) : new Date();
+    const baseMs = (payload.baseDurationMinutes ?? 0) * 60 * 1000;
+    if (!Number.isFinite(baseMs) || baseMs <= 0) {
+      throw new Error("INVALID_DURATION");
+    }
+    const endTime = new Date(startTime.getTime() + baseMs);
+    const status =
+      startTime.getTime() > Date.now() ? AuctionStatus.Scheduled : AuctionStatus.Active;
+
     const auction = await AuctionCollection.create({
-      ...payload,
-      status: AuctionStatus.CREATED,
-      currentRound: 0,
-      endsAt: new Date(Date.now() + payload.roundDurationSeconds * 1000),
-      antiSnipeWindowSeconds: payload.antiSnipeWindowSeconds ?? 10,
-      antiSnipeExtendSeconds: payload.antiSnipeExtendSeconds ?? 10,
-      botMaxBidAmount: payload.botMaxBidAmount,
-      totalRounds: payload.totalRounds ?? 1,
-      prizesCount: payload.prizesCount ?? 1,
+      title: payload.title,
+      description: payload.description,
+      startPrice: payload.startPrice,
+      bidStep: payload.bidStep,
+      currentPrice: payload.startPrice,
+      startTime,
+      endTime,
+      antiSnipeWindowMs: (payload.antiSnipeWindowMinutes ?? 10) * 60 * 1000,
+      antiSnipeExtensionMs: (payload.antiSnipeExtensionMinutes ?? 5) * 60 * 1000,
+      status,
     });
 
     return auction;
   }
 
-  async listAuctions(): Promise<AuctionDocument[]> {
-    return AuctionCollection.find().sort({ createdAt: -1 }).exec();
+  async listAuctions(status?: AuctionStatus): Promise<AuctionDocument[]> {
+    const filter = status ? { status } : {};
+    return AuctionCollection.find(filter).sort({ createdAt: -1 }).limit(200).exec();
   }
 
   async getAuctionWithBids(
@@ -55,7 +62,14 @@ class AuctionService {
     const auction = await AuctionCollection.findById(id).exec();
     if (!auction) return null;
 
-    const bids = await BidCollection.find({ auctionId: auction._id })
+    // автофинализация если время вышло
+    if (auction.status !== AuctionStatus.Ended && auction.endTime.getTime() <= Date.now()) {
+      await this.finalizeAuction(id, true);
+      const updated = await AuctionCollection.findById(id).exec();
+      if (updated) return { auction: updated, bids: [] };
+    }
+
+    const bids = await BidCollection.find({ auction: auction._id })
       .sort({ createdAt: -1 })
       .exec();
 
@@ -65,160 +79,102 @@ class AuctionService {
   async placeBid(
     auctionId: string,
     amount: number,
-    user = "demo-user"
+    username = "demo-user"
   ): Promise<BidDocument> {
     if (!mongoose.Types.ObjectId.isValid(auctionId)) {
       throw new Error("INVALID_ID");
     }
 
     const auction = await AuctionCollection.findById(auctionId).exec();
-    if (!auction) {
-      throw new Error("AUCTION_NOT_FOUND");
-    }
+    if (!auction) throw new Error("AUCTION_NOT_FOUND");
+    if (auction.status === AuctionStatus.Ended) throw new Error("AUCTION_ENDED");
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("INVALID_AMOUNT");
     }
 
-    const lastBid = await BidCollection.findOne({ auctionId })
+    // ensure user
+    const bidder = await balanceService.ensureUser(username);
+
+    const lastBid = await BidCollection.findOne({ auction: auction._id })
       .sort({ createdAt: -1 })
       .exec();
 
-    const minAllowed =
-      (lastBid?.amount ?? auction.startingPrice) + auction.minBidStep;
+    const minAllowed = (lastBid?.amount ?? auction.startPrice) + auction.bidStep;
+    if (amount < minAllowed) throw new Error("BID_TOO_LOW");
 
-    if (amount < minAllowed) {
-      throw new Error(`BID_TOO_LOW`);
+    // анти-снайп: если время почти вышло — продлеваем
+    const now = Date.now();
+    const msToEnd = auction.endTime.getTime() - now;
+    if (msToEnd <= (auction.antiSnipeWindowMs ?? 0)) {
+      auction.endTime = new Date(auction.endTime.getTime() + (auction.antiSnipeExtensionMs ?? 0));
     }
 
-    // Payment checks
-    const bidder = await balanceService.ensureUser(user);
-    // Боты сами пополняют и создают способ оплаты
-    if (user.startsWith("bot-")) {
-      if (!bidder.paymentMethod) {
-        bidder.paymentMethod = { type: "card", masked: "bot", provider: "bot" } as any;
-        await bidder.save();
-      }
-      const availableBot = bidder.balance - bidder.heldBalance;
-      if (availableBot < amount) {
-        await balanceService.deposit(user, amount * 10); // с запасом
-      }
-    } else {
-      if (!bidder.paymentMethod) {
-        // Автозадание дефолтного метода для демо-пользователей
-        bidder.paymentMethod = { type: "card", masked: "wallet", provider: "demo" } as any;
-        await bidder.save();
-      }
-      const available = bidder.balance - bidder.heldBalance;
-      if (available < amount) {
-        throw new Error("INSUFFICIENT_FUNDS");
-      }
-    }
+    // Payment checks (используем lockedBalance)
+    const available = bidder.balance;
+    if (available < amount) throw new Error("INSUFFICIENT_FUNDS");
 
-    // Release previous hold:
-    // - if текущий лидер тот же пользователь — освободим его прошлую ставку
-    // - если лидер другой — освободим его hold
+    // освобождение предыдущего лидера
     if (lastBid) {
-      if (lastBid.user === bidder.username) {
-        await balanceService.releaseHold(bidder, auctionId, lastBid.amount);
+      const prevUser = await UserCollection.findById(lastBid.user).exec();
+      if (prevUser) {
+        await balanceService.releaseHold(prevUser, auctionId, lastBid.amount);
         await walletService.refundToWallet(
-          bidder.username,
+          prevUser.username,
           lastBid.amount,
-          "outbid_self"
+          lastBid.user.equals(bidder._id) ? "outbid_self" : "outbid_by_other"
         );
-      } else {
-        const prevLeader = await UserCollection.findOne({
-          username: lastBid.user,
-        }).exec();
-        if (prevLeader) {
-          await balanceService.releaseHold(prevLeader, auctionId, lastBid.amount);
-          await walletService.refundToWallet(
-            prevLeader.username,
-            lastBid.amount,
-            "outbid_by_other"
-          );
-        }
       }
     }
 
-    // Hold bidder funds (резервируем с баланса)
     await balanceService.hold(bidder, auctionId, amount);
 
-    const round = auction.currentRound + 1;
+    auction.currentPrice = amount;
+    auction.highestBidder = bidder._id;
+    auction.bidsCount = (auction.bidsCount ?? 0) + 1;
+    auction.status = AuctionStatus.Active;
 
     const bid = await BidCollection.create({
-      auctionId: auction._id,
+      auction: auction._id,
       amount,
-      user,
-      round,
+      user: bidder._id,
     });
 
-    // Anti-snipe: extend timer if near end
-    const now = Date.now();
-    if (!auction.endsAt) {
-      auction.endsAt = new Date(now + auction.roundDurationSeconds * 1000);
-    }
-    const msToEnd = auction.endsAt.getTime() - now;
-    if (msToEnd <= (auction.antiSnipeWindowSeconds ?? 0) * 1000) {
-      auction.endsAt = new Date(
-        auction.endsAt.getTime() +
-          (auction.antiSnipeExtendSeconds ?? 0) * 1000
-      );
-    }
-
-    if (auction.status === AuctionStatus.CREATED) {
-      auction.status = AuctionStatus.RUNNING;
-    }
-    auction.currentRound = round;
     await auction.save();
-
     return bid;
   }
 
-  async finalizeAuction(auctionId: string): Promise<AuctionDocument> {
+  async finalizeAuction(auctionId: string, allowActive = false): Promise<AuctionDocument> {
     if (!mongoose.Types.ObjectId.isValid(auctionId)) {
       throw new Error("INVALID_ID");
     }
     const auction = await AuctionCollection.findById(auctionId).exec();
-    if (!auction) {
-      throw new Error("AUCTION_NOT_FOUND");
-    }
-    if (auction.status === AuctionStatus.FINISHED) {
-      return auction;
-    }
+    if (!auction) throw new Error("AUCTION_NOT_FOUND");
+    if (!allowActive && auction.endTime > new Date()) throw new Error("AUCTION_ACTIVE");
+    if (auction.status === AuctionStatus.Ended) return auction;
 
-    const bids = await BidCollection.find({ auctionId })
+    const bids = await BidCollection.find({ auction: auction._id })
       .sort({ amount: -1, createdAt: 1 })
-      .limit(auction.prizesCount ?? 1)
+      .limit(1)
       .exec();
 
     if (bids.length === 0) {
-      auction.status = AuctionStatus.FINISHED;
-      auction.finishedAt = new Date();
+      auction.status = AuctionStatus.Ended;
       await auction.save();
       return auction;
     }
 
-    const winners: { user: string; amount: number }[] = [];
-    for (const bid of bids) {
-      let winnerUser = await balanceService.ensureUser(bid.user);
-      const total = winnerUser.balance + winnerUser.heldBalance;
-      if (total < bid.amount) {
-        const diff = bid.amount - total;
-        await walletService.bridgeToSite(bid.user, diff);
-        winnerUser = await balanceService.ensureUser(bid.user);
-      }
-      await balanceService.charge(winnerUser, auctionId, bid.amount);
-      await balanceService.awardPrize(winnerUser, auctionId, bid.amount);
-      winners.push({ user: bid.user, amount: bid.amount });
-    }
-
     const top = bids[0];
-    auction.status = AuctionStatus.FINISHED;
-    auction.winnerUser = top.user;
-    auction.winningBid = top.amount;
-    auction.winners = winners as any;
-    auction.finishedAt = new Date();
+    const winnerUser = await UserCollection.findById(top.user).exec();
+    if (!winnerUser) throw new Error("WINNER_NOT_FOUND");
+
+    await balanceService.charge(winnerUser, auctionId, top.amount);
+    await balanceService.awardPrize(winnerUser, auctionId, top.amount);
+
+    auction.status = AuctionStatus.Ended;
+    auction.winnerUserId = winnerUser._id;
+    auction.winnerBidId = top._id;
+    auction.currentPrice = top.amount;
     await auction.save();
 
     return auction;

@@ -1,26 +1,10 @@
-import {
-  HydratedDocument,
-  InferSchemaType,
-  Model,
-  Schema,
-  model,
-} from "mongoose";
+import mongoose, { HydratedDocument, Model, Schema } from "mongoose";
 
 const BidSchema = new Schema(
   {
-    auctionId: {
-      type: Schema.Types.ObjectId,
-      ref: "Auction",
-      required: true,
-      index: true,
-    },
-    user: { type: String, required: true, trim: true },
-    amount: {
-      type: Number,
-      required: true,
-      min: [0.01, "amount must be greater than 0"],
-    },
-    round: { type: Number, default: 1, min: 0 },
+    auction: { type: Schema.Types.ObjectId, ref: "Auction", required: true, index: true },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    amount: { type: Number, required: true, min: 0 },
   },
   {
     timestamps: true,
@@ -28,8 +12,11 @@ const BidSchema = new Schema(
   }
 );
 
-export type Bid = InferSchemaType<typeof BidSchema>;
+BidSchema.index({ auction: 1, createdAt: -1 });
+BidSchema.index({ auction: 1, amount: -1 });
+
+export type Bid = mongoose.InferSchemaType<typeof BidSchema>;
 export type BidDocument = HydratedDocument<Bid>;
 export type BidModel = Model<Bid>;
 
-export const BidCollection = model<Bid>("Bid", BidSchema);
+export const BidCollection = mongoose.model<Bid>("Bid", BidSchema);

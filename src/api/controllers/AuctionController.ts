@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-import {
-  CreateAuctionInput,
-  auctionService,
-} from "../../services/AuctionService";
+import { CreateAuctionInput, auctionService } from "../../services/AuctionService";
 
 type CreateAuctionBody = Partial<CreateAuctionInput>;
 type BidBody = { amount?: number; user?: string };
@@ -23,50 +20,28 @@ const parseAndValidate = (
       ? body.description.trim()
       : undefined;
 
-  const startingPrice = toNumber(body.startingPrice);
-  const minBidStep = toNumber(body.minBidStep);
-  const roundDurationSeconds = toNumber(body.roundDurationSeconds);
-  const maxParticipantsPerRound = toNumber(body.maxParticipantsPerRound);
-  const antiSnipeWindowSeconds = toNumber(body.antiSnipeWindowSeconds);
-  const antiSnipeExtendSeconds = toNumber(body.antiSnipeExtendSeconds);
-  const botMaxBidAmount = toNumber(body.botMaxBidAmount);
-  const totalRounds = toNumber(body.totalRounds);
-  const prizesCount = toNumber(body.prizesCount);
+  const startPrice = toNumber(body.startPrice);
+  const bidStep = toNumber(body.bidStep);
+  const baseDurationMinutes = toNumber(body.baseDurationMinutes);
+  const antiSnipeWindowMinutes = toNumber(body.antiSnipeWindowMinutes);
+  const antiSnipeExtensionMinutes = toNumber(body.antiSnipeExtensionMinutes);
 
   if (!title) errors.push("title is required and must be non-empty");
-  if (!Number.isFinite(startingPrice) || startingPrice < 0)
-    errors.push("startingPrice must be a number >= 0");
-  if (!Number.isFinite(minBidStep) || minBidStep <= 0)
-    errors.push("minBidStep must be a number > 0");
-  if (!Number.isFinite(roundDurationSeconds) || roundDurationSeconds <= 0)
-    errors.push("roundDurationSeconds must be a number > 0");
-  if (!Number.isFinite(maxParticipantsPerRound) || maxParticipantsPerRound <= 0)
-    errors.push("maxParticipantsPerRound must be a number > 0");
+  if (!Number.isFinite(startPrice) || startPrice < 0)
+    errors.push("startPrice must be a number >= 0");
+  if (!Number.isFinite(bidStep) || bidStep <= 0) errors.push("bidStep must be a number > 0");
+  if (!Number.isFinite(baseDurationMinutes) || baseDurationMinutes <= 0)
+    errors.push("baseDurationMinutes must be a number > 0");
   if (
-    body.antiSnipeWindowSeconds !== undefined &&
-    (!Number.isFinite(antiSnipeWindowSeconds) || antiSnipeWindowSeconds < 0)
+    body.antiSnipeWindowMinutes !== undefined &&
+    (!Number.isFinite(antiSnipeWindowMinutes) || antiSnipeWindowMinutes < 0)
   )
-    errors.push("antiSnipeWindowSeconds must be >= 0");
+    errors.push("antiSnipeWindowMinutes must be >= 0");
   if (
-    body.antiSnipeExtendSeconds !== undefined &&
-    (!Number.isFinite(antiSnipeExtendSeconds) || antiSnipeExtendSeconds < 0)
+    body.antiSnipeExtensionMinutes !== undefined &&
+    (!Number.isFinite(antiSnipeExtensionMinutes) || antiSnipeExtensionMinutes < 0)
   )
-    errors.push("antiSnipeExtendSeconds must be >= 0");
-  if (
-    body.botMaxBidAmount !== undefined &&
-    (!Number.isFinite(botMaxBidAmount) || botMaxBidAmount < 0)
-  )
-    errors.push("botMaxBidAmount must be >= 0");
-  if (
-    body.totalRounds !== undefined &&
-    (!Number.isFinite(totalRounds) || totalRounds < 1)
-  )
-    errors.push("totalRounds must be >= 1");
-  if (
-    body.prizesCount !== undefined &&
-    (!Number.isFinite(prizesCount) || prizesCount < 1)
-  )
-    errors.push("prizesCount must be >= 1");
+    errors.push("antiSnipeExtensionMinutes must be >= 0");
 
   if (errors.length) return { errors };
 
@@ -75,26 +50,18 @@ const parseAndValidate = (
     value: {
       title,
       description,
-      startingPrice,
-      minBidStep,
-      roundDurationSeconds,
-      maxParticipantsPerRound,
-      antiSnipeWindowSeconds:
-        Number.isFinite(antiSnipeWindowSeconds) && antiSnipeWindowSeconds >= 0
-          ? antiSnipeWindowSeconds
+      startPrice,
+      bidStep,
+      baseDurationMinutes,
+      startTime: body.startTime as any,
+      antiSnipeWindowMinutes:
+        Number.isFinite(antiSnipeWindowMinutes) && antiSnipeWindowMinutes >= 0
+          ? antiSnipeWindowMinutes
           : undefined,
-      antiSnipeExtendSeconds:
-        Number.isFinite(antiSnipeExtendSeconds) && antiSnipeExtendSeconds >= 0
-          ? antiSnipeExtendSeconds
+      antiSnipeExtensionMinutes:
+        Number.isFinite(antiSnipeExtensionMinutes) && antiSnipeExtensionMinutes >= 0
+          ? antiSnipeExtensionMinutes
           : undefined,
-      botMaxBidAmount:
-        Number.isFinite(botMaxBidAmount) && botMaxBidAmount >= 0
-          ? botMaxBidAmount
-          : undefined,
-      totalRounds:
-        Number.isFinite(totalRounds) && totalRounds >= 1 ? totalRounds : undefined,
-      prizesCount:
-        Number.isFinite(prizesCount) && prizesCount >= 1 ? prizesCount : undefined,
     },
   };
 };
@@ -175,7 +142,7 @@ export class AuctionController {
       if (message === "BID_TOO_LOW") {
         res
           .status(400)
-          .json({ error: "Bid too low (must exceed previous by minBidStep)" });
+          .json({ error: "Bid too low (must exceed previous by bidStep)" });
         return;
       }
       if (message === "PAYMENT_METHOD_REQUIRED") {
@@ -184,6 +151,14 @@ export class AuctionController {
       }
       if (message === "INSUFFICIENT_FUNDS") {
         res.status(400).json({ error: "Insufficient funds" });
+        return;
+      }
+      if (message === "AUCTION_ENDED") {
+        res.status(400).json({ error: "Auction already ended" });
+        return;
+      }
+      if (message === "AUCTION_ACTIVE") {
+        res.status(400).json({ error: "Auction is still active" });
         return;
       }
 

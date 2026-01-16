@@ -68,20 +68,17 @@ class BotService {
 
   private async placeRandomBid(botId: number) {
     const auctions = await auctionService.listAuctions();
-    const active = auctions.filter(
-      (a) => a.status !== AuctionStatus.FINISHED
-    );
+    const active = auctions.filter((a) => a.status !== AuctionStatus.Ended);
     if (!active.length) return;
 
     const auction = active[Math.floor(Math.random() * active.length)];
-    const lastBid = await BidCollection.findOne({ auctionId: auction._id })
+    const lastBid = await BidCollection.findOne({ auction: auction._id })
       .sort({ createdAt: -1 })
       .exec();
 
-    const base =
-      (lastBid?.amount ?? auction.startingPrice) + auction.minBidStep;
+    const base = (lastBid?.amount ?? auction.startPrice) + auction.bidStep;
     const multiplier = 0.2 + Math.random() * 0.8; // 20–100% extra step
-    const amount = base + auction.minBidStep * multiplier;
+    const amount = base + auction.bidStep * multiplier;
 
     if (
       this.config.maxBidAmount !== undefined &&

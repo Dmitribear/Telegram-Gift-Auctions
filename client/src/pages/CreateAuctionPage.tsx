@@ -6,25 +6,23 @@ import { ErrorBox } from "../shared/ui/error-box";
 type FormState = {
   title: string;
   description: string;
-  startingPrice: string;
-  minBidStep: string;
-  roundDurationSeconds: string;
-  maxParticipantsPerRound: string;
-  botMaxBidAmount: string;
-  totalRounds: string;
-  prizesCount: string;
+  startPrice: string;
+  bidStep: string;
+  baseDurationMinutes: string;
+  startTime: string;
+  antiSnipeWindowMinutes: string;
+  antiSnipeExtensionMinutes: string;
 };
 
 const initialForm: FormState = {
   title: "",
   description: "",
-  startingPrice: "0",
-  minBidStep: "1",
-  roundDurationSeconds: "60",
-  maxParticipantsPerRound: "10",
-  botMaxBidAmount: "",
-  totalRounds: "1",
-  prizesCount: "1",
+  startPrice: "0",
+  bidStep: "1",
+  baseDurationMinutes: "10",
+  startTime: "",
+  antiSnipeWindowMinutes: "10",
+  antiSnipeExtensionMinutes: "5",
 };
 
 export default function CreateAuctionPage() {
@@ -53,16 +51,12 @@ export default function CreateAuctionPage() {
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
-        startingPrice: Number(form.startingPrice),
-        minBidStep: Number(form.minBidStep),
-        roundDurationSeconds: Number(form.roundDurationSeconds),
-        maxParticipantsPerRound: Number(form.maxParticipantsPerRound),
-        botMaxBidAmount:
-          form.botMaxBidAmount.trim() === ""
-            ? undefined
-            : Number(form.botMaxBidAmount),
-        totalRounds: Number(form.totalRounds),
-        prizesCount: Number(form.prizesCount),
+        startPrice: Number(form.startPrice),
+        bidStep: Number(form.bidStep),
+        baseDurationMinutes: Number(form.baseDurationMinutes),
+        startTime: form.startTime ? new Date(form.startTime).toISOString() : undefined,
+        antiSnipeWindowMinutes: Number(form.antiSnipeWindowMinutes),
+        antiSnipeExtensionMinutes: Number(form.antiSnipeExtensionMinutes),
       };
 
       const auction = await auctionApi.create(payload);
@@ -103,25 +97,25 @@ export default function CreateAuctionPage() {
 
         <div className="row">
           <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="startingPrice">Starting price</label>
+            <label htmlFor="startPrice">Start price</label>
             <input
-              id="startingPrice"
-              name="startingPrice"
+              id="startPrice"
+              name="startPrice"
               type="number"
               step="0.01"
-              value={form.startingPrice}
+              value={form.startPrice}
               onChange={handleChange}
               required
             />
           </div>
           <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="minBidStep">Min bid step</label>
+            <label htmlFor="bidStep">Bid step</label>
             <input
-              id="minBidStep"
-              name="minBidStep"
+              id="bidStep"
+              name="bidStep"
               type="number"
               step="0.01"
-              value={form.minBidStep}
+              value={form.bidStep}
               onChange={handleChange}
               required
             />
@@ -130,65 +124,50 @@ export default function CreateAuctionPage() {
 
         <div className="row">
           <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="roundDurationSeconds">Round duration (sec)</label>
+            <label htmlFor="baseDurationMinutes">Duration (minutes)</label>
             <input
-              id="roundDurationSeconds"
-              name="roundDurationSeconds"
+              id="baseDurationMinutes"
+              name="baseDurationMinutes"
               type="number"
-              value={form.roundDurationSeconds}
+              value={form.baseDurationMinutes}
               onChange={handleChange}
               required
             />
           </div>
           <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="maxParticipantsPerRound">
-              Max participants/round
-            </label>
+            <label htmlFor="startTime">Start time (optional)</label>
             <input
-              id="maxParticipantsPerRound"
-              name="maxParticipantsPerRound"
-              type="number"
-              value={form.maxParticipantsPerRound}
+              id="startTime"
+              name="startTime"
+              type="datetime-local"
+              value={form.startTime}
               onChange={handleChange}
-              required
             />
           </div>
         </div>
 
         <div style={{ display: "grid", gap: 6 }}>
-          <label htmlFor="botMaxBidAmount">Bot max bid (optional)</label>
+          <label htmlFor="antiSnipeWindowMinutes">Anti-snipe window (minutes)</label>
           <input
-            id="botMaxBidAmount"
-            name="botMaxBidAmount"
+            id="antiSnipeWindowMinutes"
+            name="antiSnipeWindowMinutes"
             type="number"
             min={0}
-            value={form.botMaxBidAmount}
+            value={form.antiSnipeWindowMinutes}
             onChange={handleChange}
-            placeholder="e.g. 500"
+            placeholder="e.g. 10"
           />
         </div>
 
         <div className="row">
           <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="totalRounds">Total rounds</label>
+            <label htmlFor="antiSnipeExtensionMinutes">Anti-snipe extend (minutes)</label>
             <input
-              id="totalRounds"
-              name="totalRounds"
+              id="antiSnipeExtensionMinutes"
+              name="antiSnipeExtensionMinutes"
               type="number"
-              min={1}
-              value={form.totalRounds}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 6 }}>
-            <label htmlFor="prizesCount">Prizes count</label>
-            <input
-              id="prizesCount"
-              name="prizesCount"
-              type="number"
-              min={1}
-              value={form.prizesCount}
+              min={0}
+              value={form.antiSnipeExtensionMinutes}
               onChange={handleChange}
               required
             />
