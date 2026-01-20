@@ -14,7 +14,7 @@ export type User = {
 
 export const userApi = {
   linkPayment: (payload: {
-    username: string;
+    username?: string;
     type: "card" | "crypto";
     masked: string;
     provider?: string;
@@ -23,10 +23,11 @@ export const userApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  deposit: (payload: { username: string; amount: number }): Promise<User> =>
+  deposit: (payload: { username?: string; amount: number }): Promise<User> =>
     request<User>("/users/deposit", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  me: (username: string): Promise<User> => request<User>(`/users/${username}`),
+  me: (username?: string): Promise<User> =>
+    request<User>(`/users/${username ?? ""}`),
 };

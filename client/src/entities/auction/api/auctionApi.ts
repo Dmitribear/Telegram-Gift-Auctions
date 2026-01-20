@@ -15,10 +15,10 @@ export const auctionApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  placeBid: (id: string, amount: number, user?: string): Promise<Bid> =>
+  placeBid: (id: string, amount: number): Promise<Bid> =>
     request<Bid>(`/auctions/${id}/bids`, {
       method: "POST",
-      body: JSON.stringify({ amount, user }),
+      body: JSON.stringify({ amount }),
     }),
   finalize: (id: string) => request<Auction>(`/auctions/${id}/finalize`, { method: "POST" }),
 };

@@ -3,6 +3,7 @@ import { BotApiKeyCollection } from "../../models/BotApiKey";
 import crypto from "crypto";
 import { transactionService } from "../../services/TransactionService";
 import { auctionService } from "../../services/AuctionService";
+import { balanceService } from "../../services/BalanceService";
 
 class BotApiController {
   list = async (_req: Request, res: Response): Promise<void> => {
@@ -23,7 +24,6 @@ class BotApiController {
     res.json({ ok: true });
   };
 
-  // пример эндпоинта для ставок ботов с api-key
   placeBotBid = async (req: Request, res: Response): Promise<void> => {
     const botKey = (req as any).botKey;
     const { auctionId, amount } = req.body ?? {};
@@ -34,8 +34,14 @@ class BotApiController {
     }
     const botUser = `bot-${botKey.name}`;
     try {
+      const user = await balanceService.ensureUser(botUser);
+      if (!user.paymentMethod) {
+        await balanceService.linkPayment(botUser, { type: "crypto", masked: "bot", provider: "internal" });
+      }
+      if (user.balance < numAmount) {
+        await balanceService.deposit(botUser, numAmount * 2);
+      }
       const bid = await auctionService.placeBid(auctionId, numAmount, botUser);
-      // лог транзакции бот-фонда
       await transactionService.record({
         user: botUser,
         auctionId,

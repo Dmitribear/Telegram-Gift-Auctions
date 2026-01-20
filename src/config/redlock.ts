@@ -1,13 +1,25 @@
 import Redlock from "redlock";
 import { redis } from "./redis";
 
-export const redlock = new Redlock([redis], {
-  driftFactor: 0.01,
-  retryCount: 10,
-  retryDelay: 200,
-  retryJitter: 200,
-});
+const disabled = process.env.DISABLE_LOCKS === "true" || process.env.NODE_ENV === "test";
 
-redlock.on("error", (err) => {
-  console.error("Redlock error", err);
-});
+type Lock = { release: () => Promise<void> };
+
+export const redlock: { acquire: (keys: string[], ttl: number) => Promise<Lock> } = disabled
+  ? {
+      acquire: async () => ({
+        release: async () => undefined,
+      }),
+    }
+  : new Redlock([redis!], {
+      driftFactor: 0.01,
+      retryCount: 10,
+      retryDelay: 200,
+      retryJitter: 200,
+    });
+
+if (!disabled && (redlock as any).on) {
+  (redlock as any).on("error", (err: Error) => {
+    console.error("Redlock error", err);
+  });
+}

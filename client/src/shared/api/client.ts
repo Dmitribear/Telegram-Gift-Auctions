@@ -1,8 +1,31 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 const defaultHeaders: HeadersInit = {
   "Content-Type": "application/json",
 };
+
+const hasWindow = typeof window !== "undefined";
+let authToken = hasWindow ? window.localStorage.getItem("authToken") : null;
+let authUser = hasWindow ? window.localStorage.getItem("authUser") : null;
+let authRole = hasWindow ? window.localStorage.getItem("authRole") : null;
+
+export const setAuthToken = (token: string | null, user?: string, role?: string) => {
+  authToken = token;
+  authUser = user ?? authUser;
+  authRole = role ?? authRole;
+  if (hasWindow) {
+    if (token) window.localStorage.setItem("authToken", token);
+    else window.localStorage.removeItem("authToken");
+    if (user) window.localStorage.setItem("authUser", user);
+    if (role) window.localStorage.setItem("authRole", role);
+  }
+};
+
+export const getAuthState = () => ({
+  token: authToken,
+  user: authUser,
+  role: authRole,
+});
 
 const friendly = (msg: string): string => {
   const m = msg?.toUpperCase?.() ?? "";
@@ -23,6 +46,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       ...defaultHeaders,
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(init?.headers ?? {}),
     },
   });

@@ -10,7 +10,7 @@ const WalletTxSchema = new Schema(
   {
     type: {
       type: String,
-      enum: ["FAUCET", "SEND", "BRIDGE_IN", "BRIDGE_OUT", "FEE"],
+      enum: ["FAUCET", "SEND", "BRIDGE_IN", "BRIDGE_OUT", "FEE", "REFUND"],
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },

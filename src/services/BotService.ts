@@ -1,6 +1,7 @@
 import { AuctionStatus } from "../models/Auction.model";
 import { BidCollection } from "../models/Bid";
 import { auctionService } from "./AuctionService";
+import { balanceService } from "./BalanceService";
 
 export type BotConfig = {
   enabled: boolean;
@@ -98,7 +99,20 @@ class BotService {
       this.config.maxDelayMs += this.config.antiSnipeExtendSeconds * 1000;
     }
 
-    await auctionService.placeBid(auction._id.toString(), amount, `bot-${botId}`);
+    const username = `bot-${botId}`;
+    const user = await balanceService.ensureUser(username);
+    if (!user.paymentMethod) {
+      await balanceService.linkPayment(username, {
+        type: "crypto",
+        masked: "bot",
+        provider: "internal",
+      });
+    }
+    if (user.balance < amount) {
+      await balanceService.deposit(username, amount * 2);
+    }
+
+    await auctionService.placeBid(auction._id.toString(), amount, username);
   }
 }
 

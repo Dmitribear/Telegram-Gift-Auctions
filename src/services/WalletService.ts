@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { ClientSession } from "mongoose";
 import { WalletCollection, WalletDocument } from "../models/Wallet";
 import { balanceService } from "./BalanceService";
 import { transactionService } from "./TransactionService";
@@ -6,20 +7,26 @@ import { transactionService } from "./TransactionService";
 const FEE = 0.01;
 
 class WalletService {
-  async ensureWallet(user: string): Promise<WalletDocument> {
-    let w = await WalletCollection.findOne({ user }).exec();
+  async ensureWallet(user: string, session?: ClientSession): Promise<WalletDocument> {
+    let w = await WalletCollection.findOne({ user }).session(session ?? null).exec();
     if (!w) {
-      w = await WalletCollection.create({
-        user,
-        address: `ton-sim-${randomUUID()}`,
-        balanceTon: 0,
-      });
+      const created = await WalletCollection.create(
+        [
+          {
+            user,
+            address: `ton-sim-${randomUUID()}`,
+            balanceTon: 0,
+          },
+        ],
+        { session }
+      );
+      w = created[0];
     }
     return w;
   }
 
-  async faucet(user: string, amount: number) {
-    const w = await this.ensureWallet(user);
+  async faucet(user: string, amount: number, session?: ClientSession) {
+    const w = await this.ensureWallet(user, session);
     w.balanceTon += amount;
     w.tx.push({
       type: "FAUCET",
@@ -28,20 +35,23 @@ class WalletService {
       hash: randomUUID(),
       status: "confirmed",
     });
-    await w.save();
-    await transactionService.record({
-      user,
-      type: "DEPOSIT",
-      amount,
-      currency: "TON",
-      auctionId: undefined,
-      meta: { source: "faucet" },
-    });
+    await w.save({ session });
+    await transactionService.record(
+      {
+        user,
+        type: "DEPOSIT",
+        amount,
+        currency: "TON",
+        auctionId: undefined,
+        meta: { source: "faucet" },
+      },
+      session
+    );
     return w;
   }
 
-  async send(user: string, amount: number, to: string) {
-    const w = await this.ensureWallet(user);
+  async send(user: string, amount: number, to: string, session?: ClientSession) {
+    const w = await this.ensureWallet(user, session);
     const total = amount + FEE;
     if (w.balanceTon < total) throw new Error("INSUFFICIENT_WALLET_FUNDS");
     w.balanceTon -= total;
@@ -59,12 +69,12 @@ class WalletService {
       hash: randomUUID(),
       status: "confirmed",
     });
-    await w.save();
+    await w.save({ session });
     return w;
   }
 
-  async bridgeToSite(user: string, amount: number) {
-    const w = await this.ensureWallet(user);
+  async bridgeToSite(user: string, amount: number, session?: ClientSession) {
+    const w = await this.ensureWallet(user, session);
     if (w.balanceTon < amount) throw new Error("INSUFFICIENT_WALLET_FUNDS");
     w.balanceTon -= amount;
     w.tx.push({
@@ -74,25 +84,28 @@ class WalletService {
       hash: randomUUID(),
       status: "confirmed",
     });
-    await w.save();
-    await balanceService.deposit(user, amount);
-    await transactionService.record({
-      user,
-      type: "BRIDGE_IN",
-      amount,
-      currency: "TON",
-      auctionId: undefined,
-      meta: { from: w.address },
-    });
+    await w.save({ session });
+    await balanceService.deposit(user, amount, session);
+    await transactionService.record(
+      {
+        user,
+        type: "BRIDGE_IN",
+        amount,
+        currency: "TON",
+        auctionId: undefined,
+        meta: { from: w.address },
+      },
+      session
+    );
     return w;
   }
 
-  async bridgeFromSite(user: string, amount: number) {
-    const w = await this.ensureWallet(user);
-    const u = await balanceService.ensureUser(user);
+  async bridgeFromSite(user: string, amount: number, session?: ClientSession) {
+    const w = await this.ensureWallet(user, session);
+    const u = await balanceService.ensureUser(user, session);
     if (u.balance < amount) throw new Error("INSUFFICIENT_SITE_BALANCE");
     u.balance -= amount;
-    await u.save();
+    await u.save({ session });
     w.balanceTon += amount;
     w.tx.push({
       type: "BRIDGE_IN",
@@ -101,21 +114,24 @@ class WalletService {
       hash: randomUUID(),
       status: "confirmed",
     });
-    await w.save();
-    await transactionService.record({
-      user,
-      type: "BRIDGE_OUT",
-      amount,
-      currency: "TON",
-      auctionId: undefined,
-      meta: { to: w.address },
-    });
+    await w.save({ session });
+    await transactionService.record(
+      {
+        user,
+        type: "BRIDGE_OUT",
+        amount,
+        currency: "TON",
+        auctionId: undefined,
+        meta: { to: w.address },
+      },
+      session
+    );
     return w;
   }
 
-  async refundToWallet(user: string, amount: number, reason: string) {
+  async refundToWallet(user: string, amount: number, reason: string, session?: ClientSession) {
     if (amount <= 0) return;
-    const w = await this.ensureWallet(user);
+    const w = await this.ensureWallet(user, session);
     w.balanceTon += amount;
     w.tx.push({
       type: "REFUND",
@@ -124,15 +140,18 @@ class WalletService {
       hash: randomUUID(),
       status: "confirmed",
     });
-    await w.save();
-    await transactionService.record({
-      user,
-      type: "BRIDGE_OUT",
-      amount,
-      currency: "TON",
-      auctionId: undefined,
-      meta: { reason },
-    });
+    await w.save({ session });
+    await transactionService.record(
+      {
+        user,
+        type: "BRIDGE_OUT",
+        amount,
+        currency: "TON",
+        auctionId: undefined,
+        meta: { reason },
+      },
+      session
+    );
   }
 }
 

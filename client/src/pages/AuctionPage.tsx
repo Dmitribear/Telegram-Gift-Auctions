@@ -10,6 +10,7 @@ import {
 import { Loader } from "../shared/ui/loader";
 import { ErrorBox } from "../shared/ui/error-box";
 import { StatusBadge } from "../shared/ui/status-badge";
+import { useAuth } from "../shared/hooks/useAuth";
 
 type State = {
   data: AuctionDetailsResponse | null;
@@ -21,6 +22,7 @@ const POLL_MS = 4000;
 
 export default function AuctionPage() {
   const { id } = useParams<{ id: string }>();
+  const { token, user } = useAuth();
   const [state, setState] = useState<State>({
     data: null,
     loading: true,
@@ -54,8 +56,6 @@ export default function AuctionPage() {
     }
   };
 
-  const [username, setUsername] = useState("demo-user");
-
   useEffect(() => {
     fetchData();
     const interval = setInterval(() => fetchData(true), POLL_MS);
@@ -87,7 +87,7 @@ export default function AuctionPage() {
 
   const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
+    if (!id || !token) return;
     const normalized = bidAmount.replace(",", ".");
     const amount = Number(normalized);
     if (!Number.isFinite(amount)) {
@@ -98,18 +98,14 @@ export default function AuctionPage() {
     setSubmitting(true);
     setState((prev) => ({ ...prev, error: null }));
     try {
-      await auctionApi.placeBid(id, amount, username);
+      await auctionApi.placeBid(id, amount);
       setBidAmount("");
       await fetchData(true);
     } catch (err) {
       const message = (err as Error).message;
-      const friendly =
-        message.includes("Insufficient funds") || message.includes("INSUFFICIENT")
-          ? "Недостаточно средств: пополните баланс или уменьшите ставку"
-          : message;
       setState((prev) => ({
         ...prev,
-        error: friendly,
+        error: message,
       }));
     } finally {
       setSubmitting(false);
@@ -158,41 +154,39 @@ export default function AuctionPage() {
             )}
           </div>
 
-          <form
-            onSubmit={handleBidSubmit}
-            style={{ display: "grid", gap: 10 }}
-          >
-            <label htmlFor="amount">Place bid</label>
-            <input
-              id="amount"
-              name="amount"
-              type="number"
-              step="0.01"
-              value={bidAmount}
-              placeholder={`>= ${minNextBid.toFixed(2)}`}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
-                setBidAmount(cleaned);
-              }}
-              disabled={submitting}
-            />
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <button className="btn" type="submit" disabled={submitting}>
-                {submitting ? "Placing..." : "Place Bid"}
-              </button>
-              <button
-                className="btn secondary"
-                type="button"
-                disabled={submitting}
-                onClick={() => auctionApi.finalize(auction._id).then(() => fetchData(true))}
-              >
-                Finalize now
-              </button>
-              <span style={{ fontSize: 13, color: "#475569" }}>
-                Min next bid: {minNextBid.toFixed(2)} TON
-              </span>
+          {token ? (
+            <form
+              onSubmit={handleBidSubmit}
+              style={{ display: "grid", gap: 10 }}
+            >
+              <label htmlFor="amount">Place bid {user ? `as ${user}` : ""}</label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                step="0.01"
+                value={bidAmount}
+                placeholder={`>= ${minNextBid.toFixed(2)}`}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                  setBidAmount(cleaned);
+                }}
+                disabled={submitting || auction.status === "ended"}
+              />
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <button className="btn" type="submit" disabled={submitting || auction.status === "ended"}>
+                  {submitting ? "Placing..." : "Place Bid"}
+                </button>
+                <span style={{ fontSize: 13, color: "#475569" }}>
+                  Min next bid: {minNextBid.toFixed(2)} TON
+                </span>
+              </div>
+            </form>
+          ) : (
+            <div className="card" style={{ background: "#f8fafc" }}>
+              Войдите, чтобы сделать ставку.
             </div>
-          </form>
+          )}
         </div>
       )}
 

@@ -4,328 +4,38 @@ export const openApiSpec: OpenAPIV3.Document = {
   openapi: "3.0.3",
   info: {
     title: "Telegram Gift Auction API",
-    version: "1.0.0",
+    version: "1.1.0",
     description:
-      "API для аукциона с анти-снайпингом. Все суммы в базовой валюте проекта.",
+      "HTTP API for user/auth flows, auctions, bidding with anti-snipe, wallet/deposits, and admin controls.",
   },
   servers: [{ url: "http://localhost:3000" }],
   tags: [
     { name: "Health" },
-    { name: "Users" },
+    { name: "Auth" },
     { name: "Auctions" },
-    { name: "Bids" },
+    { name: "Users" },
+    { name: "Wallet" },
     { name: "Admin" },
   ],
-  paths: {
-    "/health": {
-      get: {
-        tags: ["Health"],
-        summary: "Проверка работоспособности",
-        responses: {
-          "200": { description: "OK" },
-        },
-      },
-    },
-    "/api/users": {
-      post: {
-        tags: ["Users"],
-        summary: "Создать пользователя",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateUser" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "Пользователь создан",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/User" },
-              },
-            },
-          },
-          "409": { description: "Username уже существует" },
-        },
-      },
-    },
-    "/api/users/{userId}": {
-      get: {
-        tags: ["Users"],
-        summary: "Получить пользователя",
-        parameters: [
-          {
-            in: "path",
-            name: "userId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Пользователь",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/User" },
-              },
-            },
-          },
-          "404": { description: "Не найден" },
-        },
-      },
-    },
-    "/api/users/{userId}/deposit": {
-      post: {
-        tags: ["Users"],
-        summary: "Пополнить баланс",
-        parameters: [
-          {
-            in: "path",
-            name: "userId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/Deposit" },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Обновленный пользователь",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/User" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/auctions": {
-      get: {
-        tags: ["Auctions"],
-        summary: "Список аукционов",
-        parameters: [
-          {
-            in: "query",
-            name: "status",
-            required: false,
-            schema: { $ref: "#/components/schemas/AuctionStatus" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Список",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Auction" },
-                },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        tags: ["Auctions"],
-        summary: "Создать аукцион",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateAuction" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "Созданный аукцион",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Auction" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/auctions/{auctionId}": {
-      get: {
-        tags: ["Auctions"],
-        summary: "Получить аукцион",
-        parameters: [
-          {
-            in: "path",
-            name: "auctionId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Аукцион",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Auction" },
-              },
-            },
-          },
-          "404": { description: "Не найден" },
-        },
-      },
-    },
-    "/api/auctions/{auctionId}/bids": {
-      get: {
-        tags: ["Bids"],
-        summary: "Список ставок по аукциону",
-        parameters: [
-          {
-            in: "path",
-            name: "auctionId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Список ставок",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Bid" },
-                },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        tags: ["Bids"],
-        summary: "Сделать ставку",
-        parameters: [
-          {
-            in: "path",
-            name: "auctionId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateBid" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "Созданная ставка",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Bid" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/auctions/{auctionId}/finalize": {
-      post: {
-        tags: ["Admin"],
-        summary: "Финализировать аукцион",
-        parameters: [
-          {
-            in: "path",
-            name: "auctionId",
-            required: true,
-            schema: { type: "string" },
-          },
-          {
-            in: "query",
-            name: "force",
-            required: false,
-            schema: { type: "boolean" },
-            description: "Если true — разрешает финализацию активного/запланированного аукциона вручную",
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Финализированный аукцион",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Auction" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/bids": {
-      post: {
-        tags: ["Bids"],
-        summary: "Сделать ставку (альтернативный маршрут)",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateBidDirect" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "Созданная ставка",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Bid" },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
     schemas: {
+      Error: {
+        type: "object",
+        properties: {
+          error: { type: "string" },
+          details: { nullable: true },
+        },
+      },
       AuctionStatus: {
         type: "string",
         enum: ["scheduled", "active", "ended"],
-      },
-      User: {
-        type: "object",
-        properties: {
-          _id: { type: "string" },
-          username: { type: "string" },
-          balance: { type: "number" },
-          lockedBalance: { type: "number" },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
-        },
-      },
-      CreateUser: {
-        type: "object",
-        required: ["username"],
-        properties: {
-          username: { type: "string" },
-          balance: { type: "number", minimum: 0 },
-        },
-      },
-      Deposit: {
-        type: "object",
-        required: ["amount"],
-        properties: {
-          amount: { type: "number", minimum: 0 },
-        },
       },
       Auction: {
         type: "object",
@@ -341,27 +51,11 @@ export const openApiSpec: OpenAPIV3.Document = {
           antiSnipeWindowMs: { type: "number" },
           antiSnipeExtensionMs: { type: "number" },
           status: { $ref: "#/components/schemas/AuctionStatus" },
-          highestBidder: { type: "string" },
-          highestBid: { type: "string" },
           bidsCount: { type: "number" },
           winnerUserId: { type: "string" },
           winnerBidId: { type: "string" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
-        },
-      },
-      CreateAuction: {
-        type: "object",
-        required: ["title", "startPrice", "bidStep", "baseDurationMinutes"],
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          startPrice: { type: "number", minimum: 0 },
-          bidStep: { type: "number", minimum: 1 },
-          baseDurationMinutes: { type: "number", minimum: 1 },
-          startTime: { type: "string", format: "date-time" },
-          antiSnipeWindowMinutes: { type: "number", minimum: 0 },
-          antiSnipeExtensionMinutes: { type: "number", minimum: 1 },
         },
       },
       Bid: {
@@ -372,25 +66,272 @@ export const openApiSpec: OpenAPIV3.Document = {
           user: { type: "string" },
           amount: { type: "number" },
           createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
         },
       },
-      CreateBid: {
+      User: {
         type: "object",
-        required: ["userId", "amount"],
         properties: {
-          userId: { type: "string" },
-          amount: { type: "number", minimum: 0 },
+          username: { type: "string" },
+          balance: { type: "number" },
+          lockedBalance: { type: "number" },
+          heldBalance: { type: "number" },
+          prizeBalance: { type: "number" },
+          createdAt: { type: "string", format: "date-time" },
         },
       },
-      CreateBidDirect: {
+      Wallet: {
         type: "object",
-        required: ["auctionId", "userId", "amount"],
         properties: {
-          auctionId: { type: "string" },
-          userId: { type: "string" },
-          amount: { type: "number", minimum: 0 },
+          user: { type: "string" },
+          address: { type: "string" },
+          balanceTon: { type: "number" },
         },
+      },
+      LoginResponse: {
+        type: "object",
+        properties: {
+          token: { type: "string" },
+          role: { type: "string", enum: ["user", "admin"] },
+        },
+      },
+    },
+  },
+  paths: {
+    "/health": {
+      get: {
+        tags: ["Health"],
+        summary: "Service readiness probe",
+        responses: { "200": { description: "OK" } },
+      },
+    },
+    "/metrics": {
+      get: {
+        tags: ["Health"],
+        summary: "Prometheus metrics",
+        responses: { "200": { description: "Prometheus metrics text" } },
+      },
+    },
+    "/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "User login (issues JWT)",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["username"],
+                properties: { username: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "JWT issued",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/LoginResponse" } },
+            },
+          },
+          "400": { description: "Missing username", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/admin/login": {
+      post: {
+        tags: ["Admin"],
+        summary: "Admin login with shared secret",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["password"],
+                properties: { username: { type: "string" }, password: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Admin JWT issued",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/LoginResponse" } },
+            },
+          },
+          "401": { description: "Invalid secret", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/auctions": {
+      get: {
+        tags: ["Auctions"],
+        summary: "List auctions",
+        responses: {
+          "200": {
+            description: "Auctions",
+            content: {
+              "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Auction" } } },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Auctions"],
+        summary: "Create auction (admin)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title", "startPrice", "bidStep", "baseDurationMinutes"],
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  startPrice: { type: "number" },
+                  bidStep: { type: "number" },
+                  baseDurationMinutes: { type: "number" },
+                  startTime: { type: "string", format: "date-time" },
+                  antiSnipeWindowMinutes: { type: "number" },
+                  antiSnipeExtensionMinutes: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Created", content: { "application/json": { schema: { $ref: "#/components/schemas/Auction" } } } },
+          "401": { description: "Unauthorized", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/auctions/{auctionId}": {
+      get: {
+        tags: ["Auctions"],
+        summary: "Auction with bids",
+        parameters: [
+          { name: "auctionId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": {
+            description: "Auction detail",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    auction: { $ref: "#/components/schemas/Auction" },
+                    bids: { type: "array", items: { $ref: "#/components/schemas/Bid" } },
+                  },
+                },
+              },
+            },
+          },
+          "404": { description: "Not found", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/auctions/{auctionId}/bids": {
+      post: {
+        tags: ["Auctions"],
+        summary: "Place bid (auth)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "auctionId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["amount"],
+                properties: { amount: { type: "number" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Bid placed", content: { "application/json": { schema: { $ref: "#/components/schemas/Bid" } } } },
+          "400": { description: "Validation error", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+          "401": { description: "Unauthorized", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/auctions/{auctionId}/finalize": {
+      post: {
+        tags: ["Admin"],
+        summary: "Finalize auction (admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "auctionId", in: "path", required: true, schema: { type: "string" } },
+          { name: "force", in: "query", required: false, schema: { type: "boolean" } },
+        ],
+        responses: {
+          "200": { description: "Finalized", content: { "application/json": { schema: { $ref: "#/components/schemas/Auction" } } } },
+          "401": { description: "Unauthorized", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/users/deposit": {
+      post: {
+        tags: ["Users"],
+        summary: "Deposit to internal balance",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["amount"],
+                properties: { amount: { type: "number" }, username: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Updated user", content: { "application/json": { schema: { $ref: "#/components/schemas/User" } } } },
+          "401": { description: "Unauthorized", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/wallet": {
+      get: {
+        tags: ["Wallet"],
+        summary: "Get wallet by token user",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Wallet", content: { "application/json": { schema: { $ref: "#/components/schemas/Wallet" } } } },
+        },
+      },
+    },
+    "/wallet/bridge-to-site": {
+      post: {
+        tags: ["Wallet"],
+        summary: "Move TON to site balance",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", required: ["amount"], properties: { amount: { type: "number" } } } } },
+        },
+        responses: { "200": { description: "Wallet" } },
+      },
+    },
+    "/wallet/bridge-from-site": {
+      post: {
+        tags: ["Wallet"],
+        summary: "Withdraw from site to TON wallet",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", required: ["amount"], properties: { amount: { type: "number" } } } } },
+        },
+        responses: { "200": { description: "Wallet" } },
       },
     },
   },

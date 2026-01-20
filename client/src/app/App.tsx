@@ -2,44 +2,48 @@ import { Link, Route, Routes } from "react-router-dom";
 import HomePage from "../pages/HomePage";
 import CreateAuctionPage from "../pages/CreateAuctionPage";
 import AuctionPage from "../pages/AuctionPage";
-import AdminBotsPage from "../pages/AdminBotsPage";
 import ProfilePage from "../pages/ProfilePage";
 import TransactionsPage from "../pages/TransactionsPage";
 import WalletPage from "../pages/WalletPage";
+import { useAuth } from "../shared/hooks/useAuth";
 
 function App() {
+  const { user, role, logout, token } = useAuth();
+
   return (
     <div className="container">
       <header className="nav">
         <Link to="/">
-          <strong>Telegram Gift Auctions Demo</strong>
+          <strong>Telegram Gift Auctions</strong>
         </Link>
         <div className="spacer" />
-        <Link to="/" className="btn secondary">
-          Аукционы
-        </Link>
-        <Link to="/create" className="btn secondary">
-          Create Auction
-        </Link>
-        <Link to="/admin" className="btn secondary">
-          Admin
-        </Link>
-        <Link to="/profile" className="btn secondary">
-          Profile
-        </Link>
-        <Link to="/transactions" className="btn secondary">
-          Transactions
-        </Link>
-        <a href="/wallet" target="_blank" rel="noreferrer" className="btn secondary">
-          Wallet
+        <a href="/docs" target="_blank" rel="noreferrer" className="btn secondary">
+          Swagger
         </a>
+        <Link to="/" className="btn secondary">
+          Auctions
+        </Link>
+        <Link to="/wallet" className="btn secondary">
+          Wallet
+        </Link>
+        {role === "admin" && (
+          <Link to="/create" className="btn secondary">
+            Create
+          </Link>
+        )}
+        {token ? (
+          <button className="btn secondary" onClick={logout}>
+            {user} ({role}) · logout
+          </button>
+        ) : (
+          <span style={{ fontSize: 12, color: "#475569" }}>Not authenticated</span>
+        )}
       </header>
 
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/create" element={<CreateAuctionPage />} />
         <Route path="/auctions/:id" element={<AuctionPage />} />
-        <Route path="/admin" element={<AdminBotsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/wallet" element={<WalletPage />} />

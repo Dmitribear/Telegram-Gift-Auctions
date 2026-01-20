@@ -1,32 +1,64 @@
 import { Request, Response, NextFunction } from "express";
 import { BotApiKeyCollection } from "../../models/BotApiKey";
-import { authService } from "../../services/AuthService";
+import { authService, AuthTokenPayload } from "../../services/AuthService";
 
-// Демонстрационный режим: админ-панель открыта для всех.
-export function requireAdmin(
-  _req: Request,
-  _res: Response,
-  next: NextFunction
-): void {
-  next();
+export interface AuthenticatedRequest extends Request {
+  user?: AuthTokenPayload;
 }
 
+const parseBearer = (req: Request): string | null => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.replace("Bearer ", "");
+  }
+  return null;
+};
+
 export function requireAuth(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): void {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  const token = parseBearer(req);
+  if (!token) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   try {
-    const token = authHeader.replace("Bearer ", "");
     const payload = authService.verify(token);
-    (req as any).user = payload;
+    req.user = payload;
     next();
-  } catch (error) {
+  } catch {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+}
+
+export function requireAdmin(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  const headerSecret = (req.headers["x-admin-token"] as string | undefined)?.trim();
+  if (headerSecret && headerSecret === (process.env.ADMIN_TOKEN || process.env.ADMIN_PASSWORD)) {
+    req.user = { username: "admin", role: "admin" };
+    next();
+    return;
+  }
+
+  const token = parseBearer(req);
+  if (!token) {
+    res.status(401).json({ error: "Admin token required" });
+    return;
+  }
+  try {
+    const payload = authService.verify(token);
+    if (payload.role !== "admin") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    req.user = payload;
+    next();
+  } catch {
     res.status(401).json({ error: "Unauthorized" });
   }
 }

@@ -4,6 +4,9 @@ import { MongoMemoryReplSet } from "mongodb-memory-server";
 let replSet: MongoMemoryReplSet;
 
 beforeAll(async () => {
+  process.env.NODE_ENV = "test";
+  process.env.DISABLE_SCHEDULER = "true";
+  process.env.DISABLE_LOCKS = "true";
   replSet = await MongoMemoryReplSet.create({
     replSet: { storageEngine: "wiredTiger" },
   });

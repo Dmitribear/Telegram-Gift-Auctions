@@ -1,16 +1,22 @@
 import { Request, Response } from "express";
 import { walletService } from "../../services/WalletService";
+import { AuthenticatedRequest } from "../middleware/auth";
 
-class WalletController {
-  me = async (req: Request, res: Response) => {
-    const user = (req.query.user as string) || (req.body?.user as string);
+const resolveUser = (req: AuthenticatedRequest, explicit?: string): string | null => {
+  if (explicit) return explicit;
+  return req.user?.username ?? null;
+};
+
+export class WalletController {
+  me = async (req: AuthenticatedRequest, res: Response) => {
+    const user = resolveUser(req, (req.query.user as string) || (req.body?.user as string));
     if (!user) return res.status(400).json({ error: "user required" });
     const w = await walletService.ensureWallet(user);
     res.json(w);
   };
 
-  faucet = async (req: Request, res: Response) => {
-    const user = (req.body?.user as string) || "";
+  faucet = async (req: AuthenticatedRequest, res: Response) => {
+    const user = resolveUser(req, (req.body?.user as string) || "");
     const amount = Number(req.body?.amount ?? 100);
     if (!user || !Number.isFinite(amount) || amount <= 0)
       return res.status(400).json({ error: "user and amount>0 required" });
@@ -18,8 +24,9 @@ class WalletController {
     res.json(w);
   };
 
-  send = async (req: Request, res: Response) => {
-    const { user, amount, to } = req.body ?? {};
+  send = async (req: AuthenticatedRequest, res: Response) => {
+    const { amount, to } = req.body ?? {};
+    const user = resolveUser(req, req.body?.user as string);
     const num = Number(amount);
     if (!user || !to || !Number.isFinite(num) || num <= 0)
       return res.status(400).json({ error: "user,to,amount>0 required" });
@@ -31,9 +38,9 @@ class WalletController {
     }
   };
 
-  bridgeToSite = async (req: Request, res: Response) => {
-    const { user, amount } = req.body ?? {};
-    const num = Number(amount);
+  bridgeToSite = async (req: AuthenticatedRequest, res: Response) => {
+    const user = resolveUser(req, req.body?.user as string);
+    const num = Number(req.body?.amount);
     if (!user || !Number.isFinite(num) || num <= 0)
       return res.status(400).json({ error: "user, amount>0 required" });
     try {
@@ -44,9 +51,9 @@ class WalletController {
     }
   };
 
-  bridgeFromSite = async (req: Request, res: Response) => {
-    const { user, amount } = req.body ?? {};
-    const num = Number(amount);
+  bridgeFromSite = async (req: AuthenticatedRequest, res: Response) => {
+    const user = resolveUser(req, req.body?.user as string);
+    const num = Number(req.body?.amount);
     if (!user || !Number.isFinite(num) || num <= 0)
       return res.status(400).json({ error: "user, amount>0 required" });
     try {

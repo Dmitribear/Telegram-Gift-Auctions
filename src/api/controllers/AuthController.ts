@@ -14,7 +14,6 @@ class AuthController {
       const result = await authService.login(username);
       res.json(result);
     } catch (error) {
-      console.error("login failed", error);
       res.status(500).json({ error: "Login failed" });
     }
   };
